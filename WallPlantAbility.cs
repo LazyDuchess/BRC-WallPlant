@@ -3,7 +3,6 @@ using Reptile;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using ch.sycoforge.Decal;
 
 namespace WallPlant
 {
@@ -15,13 +14,17 @@ namespace WallPlant
             Planting,
             PlantedOut,
         }
-        private const float JumpOffWallOffset = 0.9f;
-        private const float ParkourWallOffset = 0.8f;
-        private const float VehicleWallOffset = 0.25f;
-        private const float MinSpeedGracePeriod = 0.1f;
-        private const float MinSpeed = 5f;
-        private const float MaxPlants = 4;
-        private const float HitpauseDuration = 0.17f;
+        private static float MaxAnglePlantOut = 40f;
+        private static float JumpSpeed = 11f;
+        private static float SpeedMultiplier = 0.9f;
+        private static float PlantPenaltyDivider = 0.65f;
+        private static float JumpOffWallOffset = 0.9f;
+        private static float ParkourWallOffset = 0.8f;
+        private static float VehicleWallOffset = 0.25f;
+        private static float MinSpeedGracePeriod = 0.1f;
+        private static float MinSpeed = 5f;
+        private static float MaxPlants = 4;
+        private static float HitpauseDuration = 0.17f;
 
         private float _speedIntoWall = 0f;
         private float _timeSinceReachedMinSpeed = 1000f;
@@ -224,8 +227,7 @@ namespace WallPlant
             canStartWallrun = true;
             canUseSpraycan = true;
 
-            if (moveStyle != MoveStyle.ON_FOOT)
-                p.PlayAnim(_footPlantOutHash, true, true);
+            p.PlayAnim(_footPlantOutHash, true, true);
 
             p.PlayVoice(AudioClipID.VoiceJump);
             PlaySfxGameplay(AudioClipID.jump);
@@ -240,7 +242,7 @@ namespace WallPlant
                 
                 var moveRot = Quaternion.LookRotation(moveInput, Vector3.up).eulerAngles;
                 var angleDiff = Mathf.DeltaAngle(moveRot.y, newRot.y);
-                angleDiff = Mathf.Clamp(angleDiff, -45f, 45f);
+                angleDiff = Mathf.Clamp(angleDiff, -MaxAnglePlantOut, MaxAnglePlantOut);
                 newRot.y -= angleDiff;
             }
 
@@ -249,12 +251,12 @@ namespace WallPlant
             p.SetPosAndRotHard(_wallPoint + _wallNormal * JumpOffWallOffset, newQuat);
             p.SetVisualRot(newQuat);
 
-            var offWallVelocity = 11f;
-            var upVelocity = 12f;
+            var offWallVelocity = _speedIntoWall * SpeedMultiplier;
+            var upVelocity = JumpSpeed;
 
             if (TimesPlanted > 0)
             {
-                var divide = (TimesPlanted + 1) * 0.65f;
+                var divide = (TimesPlanted + 1) * PlantPenaltyDivider;
                 offWallVelocity /= divide;
                 upVelocity /= divide;
             }
