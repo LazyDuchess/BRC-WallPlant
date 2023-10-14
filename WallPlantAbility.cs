@@ -90,7 +90,6 @@ namespace WallPlant
 
         public void PassiveUpdate(Ability ability)
         {
-            p.
             if (p.IsGrounded() || p.IsGrinding() || ability is HandplantAbility || ability is HeadspinAbility)
                 TimesPlanted = 0;
             if (GetWallForPlant(out Vector3 _, out Vector3 wallNormal))
