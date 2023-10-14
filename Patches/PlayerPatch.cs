@@ -33,9 +33,6 @@ namespace WallPlant.Patches
             if (wallPlantAbility == null)
                 return;
             wallPlantAbility.PassiveUpdate(___ability);
-            /*
-            if (__instance.IsGrounded() || __instance.IsGrinding() || ___ability is HandplantAbility || ___ability is HeadspinAbility)
-                wallPlantAbility.TimesPlanted = 0;*/
         }
 
         [HarmonyPrefix]

@@ -8,6 +8,7 @@ namespace WallPlant
     {
         public Player Player;
         public Player.Trick WallPlantTrick = new Player.Trick(60, 20, 10);
+
         private void Awake()
         {
             Player = GetComponent<Player>();
@@ -17,6 +18,7 @@ namespace WallPlant
             var changed = false;
             WallPlantTrick.Refresh(ref changed);
         }
+
         public void Use(string trickName = "", int trickNum = 0)
         {
             var traversePlayer = Traverse.Create(Player);

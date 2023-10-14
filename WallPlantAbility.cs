@@ -3,6 +3,7 @@ using Reptile;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using ch.sycoforge.Decal;
 
 namespace WallPlant
 {
@@ -14,19 +15,21 @@ namespace WallPlant
             Planting,
             PlantedOut,
         }
+        private const float JumpOffWallOffset = 0.9f;
+        private const float ParkourWallOffset = 0.8f;
+        private const float VehicleWallOffset = 0.25f;
         private const float MinSpeedGracePeriod = 0.1f;
         private const float MinSpeed = 5f;
-        private const float MaxPlants = 1;
+        private const float MaxPlants = 4;
         private const float HitpauseDuration = 0.17f;
 
-        private float _timeSinceReachedMinSpeed = 0f;
-        private bool _special = false;
-        //private int _handPlantHash = Animator.StringToHash("hitBounce");
+        private float _speedIntoWall = 0f;
+        private float _timeSinceReachedMinSpeed = 1000f;
+
         private int _parkourHash = Animator.StringToHash("hitBounce");
         private int _footPlantHash = Animator.StringToHash("grindRetour");
-        private int _footPlantOutHash = Animator.StringToHash("poleFlip");
+        private int _footPlantOutHash = Animator.StringToHash("airTrick0");
         private int _grindDirectionHash = Animator.StringToHash("grindDirection");
-        //private int _footPlantOutHash = Animator.StringToHash("grindRetourEnd");
 
         private State _state = State.Planting;
         private bool _didTrick = false;
@@ -75,14 +78,18 @@ namespace WallPlant
 
         public override void OnStartAbility()
         {
-            p.SetPosAndRotHard(_wallPoint + _wallNormal * 0.8f, Quaternion.LookRotation(-_wallNormal, Vector3.up));
+            var traversePlayer = Traverse.Create(p);
+            var moveStyle = traversePlayer.Field("moveStyle").GetValue<MoveStyle>();
+            var off = VehicleWallOffset;
+            if (moveStyle == MoveStyle.ON_FOOT)
+                off = ParkourWallOffset;
+            p.SetPosAndRotHard(_wallPoint + _wallNormal * off, Quaternion.LookRotation(-_wallNormal, Vector3.up));
             TimesPlanted++;
             acc = 0f;
             targetSpeed = 0f;
             normalRotation = false;
             canStartGrind = false;
             canStartWallrun = false;
-            canUseSpraycan = false;
             p.RegainAirMobility();
             _didTrick = false;
             SetState(State.Planting);
@@ -90,20 +97,38 @@ namespace WallPlant
 
         public void PassiveUpdate(Ability ability)
         {
-            if (p.IsGrounded() || p.IsGrinding() || ability is HandplantAbility || ability is HeadspinAbility)
-                TimesPlanted = 0;
-            if (GetWallForPlant(out Vector3 _, out Vector3 wallNormal))
+            if (ability != this)
             {
-                var velocityTowardsWall = Vector3.Dot(p.motor.velocity, -wallNormal);
-                if (velocityTowardsWall >= MinSpeed)
+                if (p.IsGrounded() || p.IsGrinding() || ability is HandplantAbility || ability is HeadspinAbility || ability is WallrunLineAbility)
+                    TimesPlanted = 0;
+                if (GetWallForPlant(out Vector3 _, out Vector3 wallNormal))
                 {
-                    _timeSinceReachedMinSpeed = 0f;
-                    return;
+                    var velocityTowardsWall = Vector3.Dot(p.motor.velocity, -wallNormal);
+                    if (velocityTowardsWall >= MinSpeed)
+                    {
+                        if (velocityTowardsWall > _speedIntoWall)
+                            _speedIntoWall = velocityTowardsWall;
+                        _timeSinceReachedMinSpeed = 0f;
+                        return;
+                    }
                 }
+                if (_timeSinceReachedMinSpeed > MinSpeedGracePeriod)
+                    _speedIntoWall = 0f;
             }
+
             _timeSinceReachedMinSpeed += Core.dt;
+
             if (_timeSinceReachedMinSpeed > 1000f)
                 _timeSinceReachedMinSpeed = 1000f;
+        }
+
+        private bool ValidSurface(GameObject obj)
+        {
+            if (obj.layer != 0 && obj.layer != 10 && obj.layer != 4)
+                return false;
+            if (!obj.CompareTag("Untagged"))
+                return false;
+            return true;
         }
 
         public override void FixedUpdateAbility()
@@ -128,10 +153,8 @@ namespace WallPlant
                 }
                 if (abilityTimer > 0.25f && !_didTrick)
                 {
-                    var trickName = "Sticker Slap";
-                    if (!_special)
-                        trickName = "Wall Plant";
-                    WallPlantTrickHolder.Get(p).Use(trickName, 0);
+                    var wallPlantTrickHolder = WallPlantTrickHolder.Get(p);
+                    wallPlantTrickHolder.Use("Wall Plant", 0);
                     _didTrick = true;
                 }
                 acc = stats.airAcc + 10f;
@@ -154,9 +177,10 @@ namespace WallPlant
                     return;
                 }
             }
-            else if (abilityTimer > HitpauseDuration)
+            else 
             {
-                SetState(State.PlantedOut);
+                if (abilityTimer > HitpauseDuration)
+                    SetState(State.PlantedOut);
                 return;
             }
         }
@@ -187,7 +211,6 @@ namespace WallPlant
             _state = state;
             if (_state == State.Planting)
             {
-                //PlaySfxGameplay(AudioClipID.land);
                 PlaySfxGameplay(SfxCollectionID.CombatSfx, AudioClipID.ShieldBlock);
                 p.SetVelocity(Vector3.zero);
                 if (moveStyle == MoveStyle.ON_FOOT)
@@ -203,13 +226,27 @@ namespace WallPlant
 
             if (moveStyle != MoveStyle.ON_FOOT)
                 p.PlayAnim(_footPlantOutHash, true, true);
+
             p.PlayVoice(AudioClipID.VoiceJump);
             PlaySfxGameplay(AudioClipID.jump);
 
+            
+            var moveInput = traversePlayer.Field("moveInput").GetValue<Vector3>();
             var newRot = Quaternion.LookRotation(_wallNormal, Vector3.up).eulerAngles;
+
+            if (moveInput != Vector3.zero)
+            {
+                moveInput.y = 0f;
+                
+                var moveRot = Quaternion.LookRotation(moveInput, Vector3.up).eulerAngles;
+                var angleDiff = Mathf.DeltaAngle(moveRot.y, newRot.y);
+                angleDiff = Mathf.Clamp(angleDiff, -45f, 45f);
+                newRot.y -= angleDiff;
+            }
+
             newRot.x = 0f;
             var newQuat = Quaternion.Euler(newRot);
-            p.SetRotHard(newQuat);
+            p.SetPosAndRotHard(_wallPoint + _wallNormal * JumpOffWallOffset, newQuat);
             p.SetVisualRot(newQuat);
 
             var offWallVelocity = 11f;
@@ -217,7 +254,7 @@ namespace WallPlant
 
             if (TimesPlanted > 0)
             {
-                var divide = TimesPlanted * 2;
+                var divide = (TimesPlanted + 1) * 0.65f;
                 offWallVelocity /= divide;
                 upVelocity /= divide;
             }
@@ -251,8 +288,8 @@ namespace WallPlant
             point = Vector3.zero;
             normal = Vector3.zero;
 
-            var raySeparation = 0.25f;
-            var rayDistance = 1f;
+            var raySeparation = 0.33f;
+            var rayDistance = 1.25f;
             var collisionSize = 0.5f;
 
             var rayAmount = 0;
@@ -263,17 +300,13 @@ namespace WallPlant
             for(var i=-collisionSize;i<=collisionSize;i+=raySeparation)
             {
                 rayAmount++;
-                var ray = new Ray(p.transform.position + (Vector3.up * i), p.motor.dir);
+                var ray = new Ray(p.transform.position + (Vector3.up * i) + (Vector3.up * 0.5f), p.motor.dir);
                 if (!Physics.Raycast(ray, out RaycastHit hit, rayDistance, ~0, QueryTriggerInteraction.Ignore))
                     return false;
 
-                //var logger = Plugin.Instance.GetLogger();
-                //logger.LogInfo($"Hit object {hit.collider.gameObject.name}. Layer: {hit.collider.gameObject.layer}. Tag: {hit.collider.gameObject.tag}");
+                //Plugin.Instance.GetLogger().LogInfo($"Hit {hit.collider.gameObject.name}, layer: {hit.collider.gameObject.layer}, tag: {hit.collider.gameObject.tag}");
 
-                if (!hit.collider.gameObject.CompareTag("Untagged"))
-                    return false;
-
-                if (hit.collider.gameObject.layer != 0 && hit.collider.gameObject.layer != 10)
+                if (!ValidSurface(hit.collider.gameObject))
                     return false;
 
                 var pointAlongPlayerDirection = Vector3.Dot(hit.point - p.transform.position, p.motor.dir);
@@ -310,7 +343,7 @@ namespace WallPlant
                 return false;
             var traversePlayer = Traverse.Create(p);
             var jumpRequested = traversePlayer.Field("jumpRequested").GetValue<bool>();
-            if (this.p.jumpButtonNew && !this.p.IsGrounded() && (!jumpRequested || !this.p.JumpIsAllowed()) && !this.locked)
+            if (p.jumpButtonNew && !p.IsGrounded() && (!jumpRequested || !p.JumpIsAllowed()) && !locked)
             {
                 if (!GetWallForPlant(out Vector3 wallPoint, out Vector3 wallNormal))
                     return false;
