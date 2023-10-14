@@ -19,7 +19,7 @@ namespace WallPlant
 
             var harmony = new Harmony(GUID);
             harmony.PatchAll();
-            Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
+            Logger.LogInfo($"Plugin {Name} {Version} is loaded!");
         }
 
         public ManualLogSource GetLogger()

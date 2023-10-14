@@ -6,29 +6,71 @@ using UnityEngine;
 
 namespace WallPlant
 {
+    // Wall plant ability itself.
     public class WallPlantAbility : Ability
     {
+        /// <summary>
+        /// Keep track of how many times we've wall planted without grinding/wallrunning/landing/etc. Subsequent wall plants will get weaker until we hit the limit.
+        /// </summary>
         public int TimesPlanted = 0;
+
+        // By planting i mean when our feet is on the wall and we're frozen in place, planted out is when we actually launched off the wall.
         enum State
         {
             Planting,
             PlantedOut,
         }
+
+        /// <summary>
+        /// When we plant out a wall the player will face the direction of our controls, but we don't want to be able to jump off directly into the wall or parallel to it, doesn't make a lot of sense.
+        /// So here we constrain the angle relative to the wall. If no input is pressed, we just launch off out of the wall in a straight line.
+        /// </summary>
         private static float MaxAnglePlantOut = 40f;
-        private static float JumpSpeed = 11f;
-        private static float SpeedMultiplier = 0.9f;
+        /// <summary>
+        /// The speed that is added vertically when we wall plant.
+        /// </summary>
+        private static float JumpSpeed = 8f;
+        /// <summary>
+        /// Horizontal speed when we wall plant, taken from the speed we had going into the wall, multiplied by this.
+        /// </summary>
+        private static float SpeedMultiplier = 0.6f;
+        /// <summary>
+        /// The higher this number the more our speed will be penalized in subsequent wall plants without landing.
+        /// </summary>
         private static float PlantPenaltyDivider = 0.65f;
+        /// <summary>
+        /// How far away from the wall we'll be teleported when we plant out.
+        /// </summary>
         private static float JumpOffWallOffset = 0.9f;
+        /// <summary>
+        /// How far away from the wall we'll be when we have our feet on the wall and are on foot.
+        /// </summary>
         private static float ParkourWallOffset = 0.8f;
+        /// <summary>
+        /// How far away from the wall we'll be when we have our feet on the wall and are using a vehicle.
+        /// </summary>
         private static float VehicleWallOffset = 0.25f;
+        /// <summary>
+        /// Grace period for when we hit a wall at high enough speed but we're still allowed to wall plant despite losing our speed.
+        /// </summary>
         private static float MinSpeedGracePeriod = 0.1f;
+        /// <summary>
+        /// Minimum speed into walls for a wall plant.
+        /// </summary>
         private static float MinSpeed = 5f;
+        /// <summary>
+        /// Maximum subsequent wall plants without landing.
+        /// </summary>
         private static float MaxPlants = 4;
+        /// <summary>
+        /// Duration of the pause when we wall plant.
+        /// </summary>
         private static float HitpauseDuration = 0.17f;
 
         private float _speedIntoWall = 0f;
         private float _timeSinceReachedMinSpeed = 1000f;
 
+        // Animations!
         private int _parkourHash = Animator.StringToHash("hitBounce");
         private int _footPlantHash = Animator.StringToHash("grindRetour");
         private int _footPlantOutHash = Animator.StringToHash("airTrick0");
@@ -43,12 +85,13 @@ namespace WallPlant
         {
             var traversePlayer = Traverse.Create(p);
             var abilities = traversePlayer.Field("abilities").GetValue<List<Ability>>();
-            // Need to process this before air dashing and such.
+            // Need to process this ability before air dashing, so we insert at the beginning.
             abilities.Remove(this);
             abilities.Insert(0, this);
             Init();
         }
 
+        // Helper funtion to return WallPlantAbility from a player.
         public static WallPlantAbility Get(Player player)
         {
             var traversePlayer = Traverse.Create(player);
@@ -98,6 +141,7 @@ namespace WallPlant
             SetState(State.Planting);
         }
 
+        // Reset times planted when appropriate and calculate grace periods. This runs even if the ability isn't active.
         public void PassiveUpdate(Ability ability)
         {
             if (ability != this)
@@ -121,10 +165,12 @@ namespace WallPlant
 
             _timeSinceReachedMinSpeed += Core.dt;
 
+            // i'm scared of overflows
             if (_timeSinceReachedMinSpeed > 1000f)
                 _timeSinceReachedMinSpeed = 1000f;
         }
 
+        // Checks if a gameobject is valid for a wall plant.
         private bool ValidSurface(GameObject obj)
         {
             if (obj.layer != 0 && obj.layer != 10 && obj.layer != 4)
@@ -149,6 +195,7 @@ namespace WallPlant
 
             if (_state == State.PlantedOut)
             {
+                // Cancel if we end up on the floor too soon.
                 if (p.IsGrounded())
                 {
                     p.StopCurrentAbility();
@@ -163,6 +210,7 @@ namespace WallPlant
                 acc = stats.airAcc + 10f;
                 targetSpeed = stats.walkSpeed + 5f;
                 normalRotation = true;
+                // Allow dashes and tricks mid wall plant.
                 if (abilityTimer > 0.5f)
                 {
                     if (airDashAbility.CheckActivation())
@@ -174,6 +222,7 @@ namespace WallPlant
                         return;
                     }
                 }
+                // End.
                 if (abilityTimer > 0.8f)
                 {
                     p.StopCurrentAbility();
@@ -225,7 +274,6 @@ namespace WallPlant
 
             canStartGrind = true;
             canStartWallrun = true;
-            canUseSpraycan = true;
 
             p.PlayAnim(_footPlantOutHash, true, true);
 
@@ -236,6 +284,7 @@ namespace WallPlant
             var moveInput = traversePlayer.Field("moveInput").GetValue<Vector3>();
             var newRot = Quaternion.LookRotation(_wallNormal, Vector3.up).eulerAngles;
 
+            // Calculate a jump off direction based on our input if there is input.
             if (moveInput != Vector3.zero)
             {
                 moveInput.y = 0f;
@@ -254,9 +303,10 @@ namespace WallPlant
             var offWallVelocity = _speedIntoWall * SpeedMultiplier;
             var upVelocity = JumpSpeed;
 
-            if (TimesPlanted > 0)
+            // Start penalizing our speed if we're wall planting multiple times in a row.
+            if (TimesPlanted > 1)
             {
-                var divide = (TimesPlanted + 1) * PlantPenaltyDivider;
+                var divide = TimesPlanted * PlantPenaltyDivider;
                 offWallVelocity /= divide;
                 upVelocity /= divide;
             }
@@ -285,6 +335,8 @@ namespace WallPlant
             }
         }
 
+
+        // Returns an appropriate surface in front of us for wall planting.
         private bool GetWallForPlant(out Vector3 point, out Vector3 normal)
         {
             point = Vector3.zero;
@@ -338,7 +390,7 @@ namespace WallPlant
             return true;
         }
 
-        
+        // Logic to trigger wall planting.
         public override bool CheckActivation()
         {
             if (TimesPlanted >= MaxPlants)

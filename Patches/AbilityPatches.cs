@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-// Probably the worst code I've ever had to write in my life?
+// This is very annoying, but we have to inject code into all these abilities so that we can cancel them with wall plants. This is how air dashing and other vanilla abilities do it too.
 namespace WallPlant.Patches
 {
     [HarmonyPatch(typeof(AirTrickAbility), "FixedUpdateAbility")]

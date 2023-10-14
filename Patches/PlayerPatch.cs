@@ -11,6 +11,7 @@ namespace WallPlant.Patches
     [HarmonyPatch(typeof(Player))]
     internal static class PlayerPatch
     {
+        // Inject our custom ability here.
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Player.InitAbilities))]
         private static void InitAbilities_Postfix(Player __instance, bool ___isAI)
@@ -21,6 +22,7 @@ namespace WallPlant.Patches
             __instance.gameObject.AddComponent<WallPlantTrickHolder>();
         }
 
+        // Run our passive update function.
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Player.FixedUpdateAbilities))]
         private static void FixedUpdateAbilities_Prefix(Player __instance, bool ___isAI, Ability ___ability)
@@ -35,6 +37,7 @@ namespace WallPlant.Patches
             wallPlantAbility.PassiveUpdate(___ability);
         }
 
+        // Reset wall plant stale.
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Player.RefreshAllDegrade))]
         private static void RefreshAllDegrade_Prefix(Player __instance, bool ___isAI)
