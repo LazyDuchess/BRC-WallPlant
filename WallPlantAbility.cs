@@ -20,52 +20,10 @@ namespace WallPlant
             Planting,
             PlantedOut,
         }
-
-        /// <summary>
-        /// When we plant out a wall the player will face the direction of our controls, but we don't want to be able to jump off directly into the wall or parallel to it, doesn't make a lot of sense.
-        /// So here we constrain the angle relative to the wall. If no input is pressed, we just launch off out of the wall in a straight line.
-        /// </summary>
-        private static float MaxAnglePlantOut = 40f;
-        /// <summary>
-        /// The speed that is added vertically when we wall plant.
-        /// </summary>
-        private static float JumpSpeed = 8f;
-        /// <summary>
-        /// Horizontal speed when we wall plant, taken from the speed we had going into the wall, multiplied by this.
-        /// </summary>
-        private static float SpeedMultiplier = 0.6f;
-        /// <summary>
-        /// The higher this number the more our speed will be penalized in subsequent wall plants without landing.
-        /// </summary>
-        private static float PlantPenaltyDivider = 0.65f;
-        /// <summary>
-        /// How far away from the wall we'll be teleported when we plant out.
-        /// </summary>
-        private static float JumpOffWallOffset = 0.9f;
-        /// <summary>
-        /// How far away from the wall we'll be when we have our feet on the wall and are on foot.
-        /// </summary>
-        private static float ParkourWallOffset = 0.8f;
-        /// <summary>
-        /// How far away from the wall we'll be when we have our feet on the wall and are using a vehicle.
-        /// </summary>
-        private static float VehicleWallOffset = 0.25f;
-        /// <summary>
-        /// Grace period for when we hit a wall at high enough speed but we're still allowed to wall plant despite losing our speed.
-        /// </summary>
-        private static float MinSpeedGracePeriod = 0.1f;
-        /// <summary>
-        /// Minimum speed into walls for a wall plant.
-        /// </summary>
-        private static float MinSpeed = 5f;
-        /// <summary>
-        /// Maximum subsequent wall plants without landing.
-        /// </summary>
-        private static float MaxPlants = 4;
         /// <summary>
         /// Duration of the pause when we wall plant.
         /// </summary>
-        private static float HitpauseDuration = 0.17f;
+        private static float HitpauseDuration = 0.2f;
 
         private float _speedIntoWall = 0f;
         private float _timeSinceReachedMinSpeed = 1000f;
@@ -80,6 +38,7 @@ namespace WallPlant
         private bool _didTrick = false;
         private Vector3 _wallNormal;
         private Vector3 _wallPoint;
+        private bool _hasWall = false;
 
         public WallPlantAbility(Player player) : base(player)
         {
@@ -91,7 +50,7 @@ namespace WallPlant
             Init();
         }
 
-        // Helper funtion to return WallPlantAbility from a player.
+        // Helper function to return WallPlantAbility from a player.
         public static WallPlantAbility Get(Player player)
         {
             var traversePlayer = Traverse.Create(player);
@@ -126,9 +85,9 @@ namespace WallPlant
         {
             var traversePlayer = Traverse.Create(p);
             var moveStyle = traversePlayer.Field("moveStyle").GetValue<MoveStyle>();
-            var off = VehicleWallOffset;
+            var off = WallPlantSettings.MoveStyleWallOffset;
             if (moveStyle == MoveStyle.ON_FOOT)
-                off = ParkourWallOffset;
+                off = WallPlantSettings.ParkourWallOffset;
             p.SetPosAndRotHard(_wallPoint + _wallNormal * off, Quaternion.LookRotation(-_wallNormal, Vector3.up));
             TimesPlanted++;
             acc = 0f;
@@ -136,30 +95,52 @@ namespace WallPlant
             normalRotation = false;
             canStartGrind = false;
             canStartWallrun = false;
-            p.RegainAirMobility();
             _didTrick = false;
+
+            if (WallPlantSettings.RegainAirMobility)
+                p.RegainAirMobility();
+
             SetState(State.Planting);
         }
 
         // Reset times planted when appropriate and calculate grace periods. This runs even if the ability isn't active.
         public void PassiveUpdate(Ability ability)
         {
+            _hasWall = false;
+            // Just doing this to integrate the trick more seamlessly into the game as it's possible to sequence break otherwise.
+            if (Core.Instance.SaveManager.CurrentSaveSlot.CurrentStoryObjective == Story.ObjectiveID.EscapePoliceStation)
+            {
+                var pTraverse = Traverse.Create(p);
+                var airDashAbility = pTraverse.Field("airDashAbility").GetValue<AirDashAbility>();
+                if (airDashAbility.locked)
+                    locked = true;
+                else 
+                    locked = false;
+            }
+
             if (ability != this)
             {
                 if (p.IsGrounded() || p.IsGrinding() || ability is HandplantAbility || ability is HeadspinAbility || ability is WallrunLineAbility)
                     TimesPlanted = 0;
-                if (GetWallForPlant(out Vector3 _, out Vector3 wallNormal))
+                if (GetWallForPlant(out Vector3 wallPoint, out Vector3 wallNormal))
                 {
-                    var velocityTowardsWall = Vector3.Dot(p.motor.velocity, -wallNormal);
-                    if (velocityTowardsWall >= MinSpeed)
+                    var angleBetweenWall = Vector3.Angle(p.motor.dir, -wallNormal);
+                    if (angleBetweenWall <= WallPlantSettings.MaxWallAngle)
                     {
-                        if (velocityTowardsWall > _speedIntoWall)
-                            _speedIntoWall = velocityTowardsWall;
-                        _timeSinceReachedMinSpeed = 0f;
-                        return;
+                        _hasWall = true;
+                        _wallNormal = wallNormal;
+                        _wallPoint = wallPoint;
+                        var velocityTowardsWall = Vector3.Dot(p.motor.velocity, -wallNormal);
+                        if (velocityTowardsWall >= WallPlantSettings.MinimumSpeed)
+                        {
+                            if (velocityTowardsWall > _speedIntoWall)
+                                _speedIntoWall = velocityTowardsWall;
+                            _timeSinceReachedMinSpeed = 0f;
+                            return;
+                        }
                     }
                 }
-                if (_timeSinceReachedMinSpeed > MinSpeedGracePeriod)
+                if (_timeSinceReachedMinSpeed > WallPlantSettings.GracePeriod)
                     _speedIntoWall = 0f;
             }
 
@@ -201,6 +182,12 @@ namespace WallPlant
                     p.StopCurrentAbility();
                     return;
                 }
+
+                if (abilityTimer > 0.4f)
+                {
+                    p.SetBoostpackAndFrictionEffects(BoostpackEffectMode.OFF, FrictionEffectMode.OFF);
+                }
+
                 if (abilityTimer > 0.25f && !_didTrick)
                 {
                     var wallPlantTrickHolder = WallPlantTrickHolder.Get(p);
@@ -280,7 +267,11 @@ namespace WallPlant
             p.PlayVoice(AudioClipID.VoiceJump);
             PlaySfxGameplay(AudioClipID.jump);
 
-            
+            p.SetBoostpackAndFrictionEffects(BoostpackEffectMode.ON, FrictionEffectMode.OFF);
+
+            var ringParticles = traversePlayer.Field("ringParticles").GetValue<ParticleSystem>();
+            ringParticles.Emit(1);
+
             var moveInput = traversePlayer.Field("moveInput").GetValue<Vector3>();
             var newRot = Quaternion.LookRotation(_wallNormal, Vector3.up).eulerAngles;
 
@@ -291,29 +282,26 @@ namespace WallPlant
                 
                 var moveRot = Quaternion.LookRotation(moveInput, Vector3.up).eulerAngles;
                 var angleDiff = Mathf.DeltaAngle(moveRot.y, newRot.y);
-                angleDiff = Mathf.Clamp(angleDiff, -MaxAnglePlantOut, MaxAnglePlantOut);
+                angleDiff = Mathf.Clamp(angleDiff, -WallPlantSettings.MaxJumpOffWallAngle, WallPlantSettings.MaxJumpOffWallAngle);
                 newRot.y -= angleDiff;
             }
 
             newRot.x = 0f;
             var newQuat = Quaternion.Euler(newRot);
-            p.SetPosAndRotHard(_wallPoint + _wallNormal * JumpOffWallOffset, newQuat);
+            p.SetPosAndRotHard(_wallPoint + _wallNormal * WallPlantSettings.JumpOffWallOffset, newQuat);
             p.SetVisualRot(newQuat);
 
-            var offWallVelocity = _speedIntoWall * SpeedMultiplier;
-            var upVelocity = JumpSpeed;
+            var offWallVelocity = _speedIntoWall * WallPlantSettings.SpeedMultiplier;
+            var upVelocity = WallPlantSettings.JumpForce;
 
             // Start penalizing our speed if we're wall planting multiple times in a row.
-            if (TimesPlanted > 1)
-            {
-                var divide = TimesPlanted * PlantPenaltyDivider;
-                offWallVelocity /= divide;
-                upVelocity /= divide;
-            }
+            var penaltyPlants = WallPlantSettings.WallPlantsUntilMaxPenalty - 1f;
+            var currentPlant = (float)TimesPlanted - 1;
+            var multiply = -(currentPlant - penaltyPlants) / penaltyPlants;
+            offWallVelocity *= multiply;
+            upVelocity *= multiply;
 
             p.SetVelocity(_wallNormal * offWallVelocity + Vector3.up * upVelocity);
-
-            var ringParticles = traversePlayer.Field("ringParticles").GetValue<ParticleSystem>();
 
             var isJumping = traversePlayer.Field("isJumping");
             var maintainSpeedJump = traversePlayer.Field("maintainSpeedJump");
@@ -322,7 +310,7 @@ namespace WallPlant
             var jumpedThisFrame = traversePlayer.Field("jumpedThisFrame");
             var timeSinceLastJump = traversePlayer.Field("timeSinceLastJump");
 
-            ringParticles.Emit(1);
+           
             if (p.IsGrounded())
             {
                 isJumping.SetValue(true);
@@ -343,7 +331,7 @@ namespace WallPlant
             normal = Vector3.zero;
 
             var raySeparation = 0.33f;
-            var rayDistance = 1.25f;
+            var rayDistance = 1.5f;
             var collisionSize = 0.5f;
 
             var rayAmount = 0;
@@ -393,17 +381,17 @@ namespace WallPlant
         // Logic to trigger wall planting.
         public override bool CheckActivation()
         {
-            if (TimesPlanted >= MaxPlants)
+            if (!_hasWall)
+                return false;
+            if (TimesPlanted >= WallPlantSettings.MaximumWallPlants)
                 return false;
             var traversePlayer = Traverse.Create(p);
             var jumpRequested = traversePlayer.Field("jumpRequested").GetValue<bool>();
             if (p.jumpButtonNew && !p.IsGrounded() && (!jumpRequested || !p.JumpIsAllowed()) && !locked)
             {
-                if (!GetWallForPlant(out Vector3 wallPoint, out Vector3 wallNormal))
+                if (_timeSinceReachedMinSpeed > WallPlantSettings.GracePeriod)
                     return false;
-                if (_timeSinceReachedMinSpeed > MinSpeedGracePeriod)
-                    return false;
-                Trigger(wallPoint, wallNormal);
+                Trigger(_wallPoint, _wallNormal);
                 return true;
             }
             return false;
