@@ -298,6 +298,10 @@ namespace WallPlant
             var penaltyPlants = WallPlantSettings.WallPlantsUntilMaxPenalty - 1f;
             var currentPlant = (float)TimesPlanted - 1;
             var multiply = -(currentPlant - penaltyPlants) / penaltyPlants;
+
+            if (WallPlantSettings.WallPlantsUntilMaxPenalty <= 0f)
+                multiply = 1f;
+
             offWallVelocity *= multiply;
             upVelocity *= multiply;
 
@@ -383,7 +387,7 @@ namespace WallPlant
         {
             if (!_hasWall)
                 return false;
-            if (TimesPlanted >= WallPlantSettings.MaximumWallPlants)
+            if (TimesPlanted >= WallPlantSettings.MaximumWallPlants && WallPlantSettings.MaximumWallPlants > 0)
                 return false;
             var traversePlayer = Traverse.Create(p);
             var jumpRequested = traversePlayer.Field("jumpRequested").GetValue<bool>();

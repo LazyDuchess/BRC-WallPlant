@@ -45,7 +45,13 @@ namespace WallPlant
             _maximumWallPlants = config.Bind("WallPlant",
                 "MaxWallPlants",
                 4,
-                "Maximum amount of wall plants you can do in a row, before you have to grind/wallrun/land/etc. to reset the counter."
+                "Maximum amount of wall plants you can do in a row, before you have to grind/wallrun/land/etc. to reset the counter. Set this to 0 to allow unlimited wall plants in a row."
+                );
+
+            _wallPlantsUntilMaxPenalty = config.Bind("WallPlant",
+                "WallPlantsUntilMaxPenalty",
+                5f,
+                "Amount of wall plants in a row until your strength drops to zero. This should probably be higher than the maximum amount of wall plants you can do so that you don't drop to zero strength at the last one. This number can have a fractional part. Set this to 0 to disable the penalty completely."
                 );
 
             _regainAirMobility = config.Bind("WallPlant",
@@ -88,12 +94,6 @@ namespace WallPlant
                 "JumpOffWallOffset",
                 0.9f,
                 "How far away from the wall you'll be teleported when you jump off."
-                );
-
-            _wallPlantsUntilMaxPenalty = config.Bind("WallPlant",
-                "WallPlantsUntilMaxPenalty",
-                5f,
-                "Amount of wall plants in a row until your strength drops to zero. This should probably be higher than the maximum amount of wall plants you can do so that you don't drop to zero strength at the last one. This number can have a fractional part."
                 );
         }
     }
