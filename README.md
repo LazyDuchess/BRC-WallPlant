@@ -1,5 +1,5 @@
 # BRC-WallPlant
-BepInEx plugin that adds a Wall Plant trick to Bomb Rush Cyberfunk. To trigger it, air into a wall and press the jump button as you hit the wall.
+BepInEx plugin that adds a Wall Plant trick to Bomb Rush Cyberfunk. To trigger it, air into a wall and press the jump button as you hit the wall. Works on foot and with all move styles.
 
 ![wallplant](https://github.com/LazyDuchess/BRC-WallPlant/assets/42678262/1b259137-48fc-44de-8095-c8bd72e8d64b)
 
