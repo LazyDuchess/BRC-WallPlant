@@ -42,20 +42,15 @@ namespace WallPlant
 
         public WallPlantAbility(Player player) : base(player)
         {
-            var traversePlayer = Traverse.Create(p);
-            var abilities = traversePlayer.Field("abilities").GetValue<List<Ability>>();
             // Need to process this ability before air dashing, so we insert at the beginning.
-            abilities.Remove(this);
-            abilities.Insert(0, this);
-            Init();
+            p.abilities.Remove(this);
+            p.abilities.Insert(0, this);
         }
 
         // Helper function to return WallPlantAbility from a player.
         public static WallPlantAbility Get(Player player)
         {
-            var traversePlayer = Traverse.Create(player);
-            var abilities = traversePlayer.Field("abilities").GetValue<List<Ability>>();
-            foreach(var ability in abilities)
+            foreach(var ability in player.abilities)
             {
                 if (ability is WallPlantAbility)
                     return ability as WallPlantAbility;
@@ -65,11 +60,8 @@ namespace WallPlant
 
         public override void Init()
         {
-            var traversePlayer = Traverse.Create(p);
-            var stats = traversePlayer.Field("stats").GetValue<MovementStats>();
-
             normalMovement = true;
-            decc = stats.airDecc;
+            decc = p.stats.airDecc;
             customGravity = 0f;
             treatPlayerAsSortaGrounded = true;
         }
@@ -83,10 +75,8 @@ namespace WallPlant
 
         public override void OnStartAbility()
         {
-            var traversePlayer = Traverse.Create(p);
-            var moveStyle = traversePlayer.Field("moveStyle").GetValue<MoveStyle>();
             var off = WallPlantSettings.MoveStyleWallOffset;
-            if (moveStyle == MoveStyle.ON_FOOT)
+            if (p.moveStyle == MoveStyle.ON_FOOT)
                 off = WallPlantSettings.ParkourWallOffset;
             p.SetPosAndRotHard(_wallPoint + _wallNormal * off, Quaternion.LookRotation(-_wallNormal, Vector3.up));
             TimesPlanted++;
@@ -104,23 +94,16 @@ namespace WallPlant
         }
 
         // Reset times planted when appropriate and calculate grace periods. This runs even if the ability isn't active.
-        public void PassiveUpdate(Ability ability)
+        public void PassiveUpdate()
         {
             _hasWall = false;
             // Just doing this to integrate the trick more seamlessly into the game as it's possible to sequence break otherwise.
             if (Core.Instance.SaveManager.CurrentSaveSlot.CurrentStoryObjective == Story.ObjectiveID.EscapePoliceStation)
-            {
-                var pTraverse = Traverse.Create(p);
-                var airDashAbility = pTraverse.Field("airDashAbility").GetValue<AirDashAbility>();
-                if (airDashAbility.locked)
-                    locked = true;
-                else 
-                    locked = false;
-            }
+                locked = p.airDashAbility.locked;
 
-            if (ability != this)
+            if (p.ability != this)
             {
-                if (p.IsGrounded() || p.IsGrinding() || ability is HandplantAbility || ability is HeadspinAbility || ability is WallrunLineAbility)
+                if (p.IsGrounded() || p.IsGrinding() || p.ability is HandplantAbility || p.ability is HeadspinAbility || p.ability is WallrunLineAbility)
                     TimesPlanted = 0;
                 if (GetWallForPlant(out Vector3 wallPoint, out Vector3 wallNormal))
                 {
@@ -164,15 +147,8 @@ namespace WallPlant
         public override void FixedUpdateAbility()
         {
             p.SetVisualRotLocal0();
-            var traversePlayer = Traverse.Create(p);
 
-            var stats = traversePlayer.Field("stats").GetValue<MovementStats>();
-            var airDashAbility = traversePlayer.Field("airDashAbility").GetValue<AirDashAbility>();
-            var airTrickAbility = traversePlayer.Field("airTrickAbility").GetValue<AirTrickAbility>();
-            var abilityTimer = traversePlayer.Field("abilityTimer").GetValue<float>();
-            var anim = traversePlayer.Field("anim").GetValue<Animator>();
-
-            anim.SetFloat(_grindDirectionHash, 0f);
+            p.anim.SetFloat(_grindDirectionHash, 0f);
 
             if (_state == State.PlantedOut)
             {
@@ -183,34 +159,34 @@ namespace WallPlant
                     return;
                 }
 
-                if (abilityTimer > 0.4f)
+                if (p.abilityTimer > 0.4f)
                 {
                     p.SetBoostpackAndFrictionEffects(BoostpackEffectMode.OFF, FrictionEffectMode.OFF);
                 }
 
-                if (abilityTimer > 0.25f && !_didTrick)
+                if (p.abilityTimer > 0.25f && !_didTrick)
                 {
                     var wallPlantTrickHolder = WallPlantTrickHolder.Get(p);
                     wallPlantTrickHolder.Use("Wall Plant", 0);
                     _didTrick = true;
                 }
-                acc = stats.airAcc + 10f;
-                targetSpeed = stats.walkSpeed + 5f;
+                acc = p.stats.airAcc + 10f;
+                targetSpeed = p.stats.walkSpeed + 5f;
                 normalRotation = true;
                 // Allow dashes and tricks mid wall plant.
-                if (abilityTimer > 0.5f)
+                if (p.abilityTimer > 0.5f)
                 {
-                    if (airDashAbility.CheckActivation())
+                    if (p.airDashAbility.CheckActivation())
                     {
                         return;
                     }
-                    if (airTrickAbility.CheckActivation())
+                    if (p.airTrickAbility.CheckActivation())
                     {
                         return;
                     }
                 }
                 // End.
-                if (abilityTimer > 0.8f)
+                if (p.abilityTimer > 0.8f)
                 {
                     p.StopCurrentAbility();
                     return;
@@ -218,41 +194,20 @@ namespace WallPlant
             }
             else 
             {
-                if (abilityTimer > HitpauseDuration)
+                if (p.abilityTimer > HitpauseDuration)
                     SetState(State.PlantedOut);
                 return;
             }
         }
 
-        private void PlaySfxGameplay(AudioClipID audioClipID, float randomPitchVariance = 0f)
-        {
-            var traversePlayer = Traverse.Create(p);
-            var moveStyle = traversePlayer.Field("moveStyle").GetValue<MoveStyle>();
-            var playerOneShotAudioSource = traversePlayer.Field("playerOneShotAudioSource").GetValue<AudioSource>();
-            var audioManager = p.AudioManager;
-            var traverseAudioManager = Traverse.Create(audioManager);
-            traverseAudioManager.Method("PlaySfxGameplay", new Type[] { typeof(MoveStyle), typeof(AudioClipID), typeof(AudioSource), typeof(float) }, new object[] { moveStyle, audioClipID, playerOneShotAudioSource, randomPitchVariance}).GetValue();
-        }
-
-        private void PlaySfxGameplay(SfxCollectionID collectionId, AudioClipID audioClipID, float randomPitchVariance = 0f)
-        {
-            var traversePlayer = Traverse.Create(p);
-            var playerOneShotAudioSource = traversePlayer.Field("playerOneShotAudioSource").GetValue<AudioSource>();
-            var audioManager = p.AudioManager;
-            var traverseAudioManager = Traverse.Create(audioManager);
-            traverseAudioManager.Method("PlaySfxGameplay", new Type[] { typeof(SfxCollectionID), typeof(AudioClipID), typeof(AudioSource), typeof(float) }, new object[] { collectionId, audioClipID, playerOneShotAudioSource, randomPitchVariance }).GetValue();
-        }
-
         private void SetState(State state)
         {
-            var traversePlayer = Traverse.Create(p);
-            var moveStyle = traversePlayer.Field("moveStyle").GetValue<MoveStyle>();
             _state = state;
             if (_state == State.Planting)
             {
-                PlaySfxGameplay(SfxCollectionID.CombatSfx, AudioClipID.ShieldBlock);
+                p.AudioManager.PlaySfxGameplay(SfxCollectionID.CombatSfx, AudioClipID.ShieldBlock, p.playerOneShotAudioSource);
                 p.SetVelocity(Vector3.zero);
-                if (moveStyle == MoveStyle.ON_FOOT)
+                if (p.moveStyle == MoveStyle.ON_FOOT)
                     p.PlayAnim(_parkourHash, true, true);
                 else
                     p.PlayAnim(_footPlantHash, true, true);
@@ -265,14 +220,13 @@ namespace WallPlant
             p.PlayAnim(_footPlantOutHash, true, true);
 
             p.PlayVoice(AudioClipID.VoiceJump);
-            PlaySfxGameplay(AudioClipID.jump);
+            p.AudioManager.PlaySfxGameplay(p.moveStyle, AudioClipID.jump, p.playerOneShotAudioSource);
 
             p.SetBoostpackAndFrictionEffects(BoostpackEffectMode.ON, FrictionEffectMode.OFF);
 
-            var ringParticles = traversePlayer.Field("ringParticles").GetValue<ParticleSystem>();
-            ringParticles.Emit(1);
+            p.ringParticles.Emit(1);
 
-            var moveInput = traversePlayer.Field("moveInput").GetValue<Vector3>();
+            var moveInput = p.moveInput;
             var newRot = Quaternion.LookRotation(_wallNormal, Vector3.up).eulerAngles;
 
             // Calculate a jump off direction based on our input if there is input.
@@ -307,23 +261,16 @@ namespace WallPlant
 
             p.SetVelocity(_wallNormal * offWallVelocity + Vector3.up * upVelocity);
 
-            var isJumping = traversePlayer.Field("isJumping");
-            var maintainSpeedJump = traversePlayer.Field("maintainSpeedJump");
-            var jumpConsumed = traversePlayer.Field("jumpConsumed");
-            var jumpRequested = traversePlayer.Field("jumpRequested");
-            var jumpedThisFrame = traversePlayer.Field("jumpedThisFrame");
-            var timeSinceLastJump = traversePlayer.Field("timeSinceLastJump");
-
            
             if (p.IsGrounded())
             {
-                isJumping.SetValue(true);
-                maintainSpeedJump.SetValue(false);
-                jumpConsumed.SetValue(true);
-                jumpRequested.SetValue(false);
-                jumpedThisFrame.SetValue(true);
-                timeSinceLastJump.SetValue(0f);
-                traversePlayer.Method("ForceUnground", true).GetValue();
+                p.isJumping = true;
+                p.maintainSpeedJump = false;
+                p.jumpConsumed = true;
+                p.jumpRequested = false;
+                p.jumpedThisFrame = true;
+                p.timeSinceLastJump = 0f;
+                p.ForceUnground(true);
             }
         }
 
@@ -389,9 +336,7 @@ namespace WallPlant
                 return false;
             if (TimesPlanted >= WallPlantSettings.MaximumWallPlants && WallPlantSettings.MaximumWallPlants > 0)
                 return false;
-            var traversePlayer = Traverse.Create(p);
-            var jumpRequested = traversePlayer.Field("jumpRequested").GetValue<bool>();
-            if (p.jumpButtonNew && !p.IsGrounded() && (!jumpRequested || !p.JumpIsAllowed()) && !locked)
+            if (p.jumpButtonNew && !p.IsGrounded() && (!p.jumpRequested || !p.JumpIsAllowed()) && !locked)
             {
                 if (_timeSinceReachedMinSpeed > WallPlantSettings.GracePeriod)
                     return false;

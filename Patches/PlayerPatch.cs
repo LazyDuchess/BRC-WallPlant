@@ -14,9 +14,9 @@ namespace WallPlant.Patches
         // Inject our custom ability here.
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Player.InitAbilities))]
-        private static void InitAbilities_Postfix(Player __instance, bool ___isAI)
+        private static void InitAbilities_Postfix(Player __instance)
         {
-            if (___isAI)
+            if (__instance.isAI)
                 return;
             new WallPlantAbility(__instance);
             __instance.gameObject.AddComponent<WallPlantTrickHolder>();
@@ -25,24 +25,24 @@ namespace WallPlant.Patches
         // Run our passive update function.
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Player.FixedUpdateAbilities))]
-        private static void FixedUpdateAbilities_Prefix(Player __instance, bool ___isAI, Ability ___ability)
+        private static void FixedUpdateAbilities_Prefix(Player __instance)
         {
-            if (___isAI)
+            if (__instance.isAI)
                 return;
-            if (___ability is WallPlantAbility)
+            if (__instance.ability is WallPlantAbility)
                 return;
             var wallPlantAbility = WallPlantAbility.Get(__instance);
             if (wallPlantAbility == null)
                 return;
-            wallPlantAbility.PassiveUpdate(___ability);
+            wallPlantAbility.PassiveUpdate();
         }
 
         // Reset wall plant stale.
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Player.RefreshAllDegrade))]
-        private static void RefreshAllDegrade_Prefix(Player __instance, bool ___isAI)
+        private static void RefreshAllDegrade_Prefix(Player __instance)
         {
-            if (___isAI)
+            if (__instance.isAI)
                 return;
             var trickHolder = WallPlantTrickHolder.Get(__instance);
             if (trickHolder == null)
@@ -52,9 +52,9 @@ namespace WallPlant.Patches
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Player.RefreshAirTricks))]
-        private static void RefreshAirTricks_Prefix(Player __instance, bool ___isAI)
+        private static void RefreshAirTricks_Prefix(Player __instance)
         {
-            if (___isAI)
+            if (__instance.isAI)
                 return;
             var trickHolder = WallPlantTrickHolder.Get(__instance);
             if (trickHolder == null)

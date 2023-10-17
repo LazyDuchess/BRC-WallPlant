@@ -25,12 +25,10 @@ namespace WallPlant
         // This is hacky asf, but basically we replace the handplant trick with ours, do the trick then set it back to handplant. This is a very basic trick with no special behavior so it works for us.
         public void Use(string trickName = "", int trickNum = 0)
         {
-            var traversePlayer = Traverse.Create(Player);
-            var handPlantTrick = traversePlayer.Field("handplantTrick");
-            var handPlantTrickOld = handPlantTrick.GetValue();
-            handPlantTrick.SetValue(WallPlantTrick);
+            var handPlantTrickOld = Player.handplantTrick;
+            Player.handplantTrick = WallPlantTrick;
             Player.DoTrick(Player.TrickType.HANDPLANT, trickName, trickNum);
-            handPlantTrick.SetValue(handPlantTrickOld);
+            Player.handplantTrick = handPlantTrickOld;
         }
         public static WallPlantTrickHolder Get(Player player)
         {

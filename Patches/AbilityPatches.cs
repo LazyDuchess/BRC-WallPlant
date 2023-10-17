@@ -12,56 +12,56 @@ namespace WallPlant.Patches
     [HarmonyPatch(typeof(AirTrickAbility), "FixedUpdateAbility")]
     internal static class AirTrickAbilityPatch
     {
-        private static bool Prefix(Player ___p, Ability __instance)
+        private static bool Prefix(Ability __instance)
         {
-            return AbilityPatches.Prefix(___p, __instance);
+            return AbilityPatches.Prefix(__instance);
         }
     }
     [HarmonyPatch(typeof(BoostAbility), "FixedUpdateAbility")]
     internal static class BoostAbilityPatch
     {
-        private static bool Prefix(Player ___p, Ability __instance)
+        private static bool Prefix(Ability __instance)
         {
-            return AbilityPatches.Prefix(___p, __instance);
+            return AbilityPatches.Prefix(__instance);
         }
     }
     [HarmonyPatch(typeof(FlipOutJumpAbility), "FixedUpdateAbility")]
     internal static class FlipOutJumpAbilityPatch
     {
-        private static bool Prefix(Player ___p, Ability __instance)
+        private static bool Prefix(Ability __instance)
         {
-            return AbilityPatches.Prefix(___p, __instance);
+            return AbilityPatches.Prefix(__instance);
         }
     }
     [HarmonyPatch(typeof(HitBounceAbility), "FixedUpdateAbility")]
     internal static class HitBounceAbilityPatch
     {
-        private static bool Prefix(Player ___p, Ability __instance)
+        private static bool Prefix(Ability __instance)
         {
-            return AbilityPatches.Prefix(___p, __instance);
+            return AbilityPatches.Prefix(__instance);
         }
     }
     [HarmonyPatch(typeof(SpecialAirAbility), "FixedUpdateAbility")]
     internal static class SpecialAirAbilityPatch
     {
-        private static bool Prefix(Player ___p, Ability __instance)
+        private static bool Prefix(Ability __instance)
         {
-            return AbilityPatches.Prefix(___p, __instance);
+            return AbilityPatches.Prefix(__instance);
         }
     }
     [HarmonyPatch(typeof(AirDashAbility), "FixedUpdateAbility")]
     internal static class AirDashAbilityPatch
     {
-        private static bool Prefix(Player ___p, Ability __instance)
+        private static bool Prefix(Ability __instance)
         {
-            return AbilityPatches.Prefix(___p, __instance);
+            return AbilityPatches.Prefix(__instance);
         }
     }
     internal static class AbilityPatches
     {
-        internal static bool Prefix(Player ___p, Ability __instance)
+        internal static bool Prefix(Ability __instance)
         {
-            var wallPlantAbility = WallPlantAbility.Get(___p);
+            var wallPlantAbility = WallPlantAbility.Get(__instance.p);
             if (wallPlantAbility == null)
                 return true;
 
@@ -74,8 +74,7 @@ namespace WallPlant.Patches
             else if (__instance is SpecialAirAbility)
             {
                 var airAbility = __instance as SpecialAirAbility;
-                var hitEnemy = Traverse.Create(airAbility).Field("hitEnemy").GetValue<bool>();
-                minTimeForAbility = airAbility.duration - (hitEnemy ? 1.2f : 0.35f);
+                minTimeForAbility = airAbility.duration - (airAbility.hitEnemy ? 1.2f : 0.35f);
             }
             else if (__instance is VertAbility)
             {
@@ -88,9 +87,7 @@ namespace WallPlant.Patches
 
             if (minTimeForAbility != 0f)
             {
-                var traversePlayer = Traverse.Create(___p);
-                var abilityTimer = traversePlayer.Field("abilityTimer").GetValue<float>();
-                if (abilityTimer <= minTimeForAbility)
+                if (__instance.p.abilityTimer <= minTimeForAbility)
                     return true;
             }
 
