@@ -62,7 +62,7 @@ namespace WallPlant
 
             _speedMultiplier = config.Bind("WallPlant",
                 "SpeedMultiplier",
-                0.65f,
+                0.75f,
                 "How much of your velocity into the wall will be transferred when you jump off the wall."
                 );
 
@@ -74,13 +74,13 @@ namespace WallPlant
 
             _minimumSpeed = config.Bind("WallPlant",
                 "MinimumSpeed",
-                2.5f,
+                1f,
                 "Minimum speed into a wall to be able to wall plant off of it."
                 );
 
             _maxWallAngle = config.Bind("WallPlant",
                 "MaxWallAngle",
-                40f,
+                60f,
                 "Maximum angle difference between the player direction and the wall angle."
                 );
 
