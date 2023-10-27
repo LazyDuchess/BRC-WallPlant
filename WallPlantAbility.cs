@@ -3,6 +3,7 @@ using Reptile;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using CommonAPI;
 
 namespace WallPlant
 {
@@ -40,11 +41,17 @@ namespace WallPlant
         private Vector3 _wallPoint;
         private bool _hasWall = false;
 
+        private bool _graffiti = false;
+        private bool _graffitiPlaced = false;
+
+        private LayerMask _wallPlantLayerMask;
+
         public WallPlantAbility(Player player) : base(player)
         {
             // Need to process this ability before air dashing, so we insert at the beginning.
             p.abilities.Remove(this);
             p.abilities.Insert(0, this);
+            _wallPlantLayerMask = (1 << 0) | (1 << 10) | (1 << 4);
         }
 
         // Helper function to return WallPlantAbility from a player.
@@ -86,6 +93,8 @@ namespace WallPlant
             canStartGrind = false;
             canStartWallrun = false;
             _didTrick = false;
+            _graffitiPlaced = false;
+            _graffiti = false;
 
             if (WallPlantSettings.RegainAirMobility)
                 p.RegainAirMobility();
@@ -137,10 +146,29 @@ namespace WallPlant
         // Checks if a gameobject is valid for a wall plant.
         private bool ValidSurface(GameObject obj)
         {
-            if (obj.layer != 0 && obj.layer != 10 && obj.layer != 4)
+            if (((1 << obj.layer) & _wallPlantLayerMask) == 0)
                 return false;
             if (!obj.CompareTag("Untagged"))
                 return false;
+            return true;
+        }
+
+        private bool DoGraffiti()
+        {
+            _graffitiPlaced = true;
+            var decalRay = new Ray(p.transform.position + (Vector3.up * 0.5f), p.transform.forward);
+            if (!Physics.Raycast(decalRay, out RaycastHit hit, 2f, _wallPlantLayerMask, QueryTriggerInteraction.Ignore))
+                return false;
+            var body = hit.collider.attachedRigidbody;
+            if (body != null)
+                return false;
+            p.SetSpraycanState(Player.SpraycanState.SPRAY);
+            p.AudioManager.PlaySfxGameplay(SfxCollectionID.GraffitiSfx, AudioClipID.Spray);
+            var decal = Decal.Create(hit.point, hit.normal);
+            var graffInfo = AssetAPI.GetGraffitiArtInfo();
+            var graff = graffInfo.FindByCharacter(p.character);
+            decal.SetTexture(graff.graffitiMaterial.mainTexture);
+            decal.SetSize(1.5f);
             return true;
         }
 
@@ -167,7 +195,10 @@ namespace WallPlant
                 if (p.abilityTimer > 0.25f && !_didTrick)
                 {
                     var wallPlantTrickHolder = WallPlantTrickHolder.Get(p);
-                    wallPlantTrickHolder.Use("Wall Plant", 0);
+                    var trickName = "Wall Plant";
+                    if (_graffiti)
+                        trickName = "Graffiti Plant";
+                    wallPlantTrickHolder.Use(trickName, 0);
                     _didTrick = true;
                 }
                 acc = p.stats.airAcc + 10f;
@@ -194,6 +225,13 @@ namespace WallPlant
             }
             else 
             {
+
+                if (p.abilityTimer <= 0.1f && !_graffiti && !_graffitiPlaced && p.sprayButtonHeld)
+                    _graffiti = true;
+
+                if (_graffiti && !_graffitiPlaced)
+                    _graffiti = DoGraffiti();
+
                 if (p.abilityTimer > HitpauseDuration)
                     SetState(State.PlantedOut);
                 return;
