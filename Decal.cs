@@ -4,20 +4,42 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using CommonAPI;
+using Reptile;
 
 namespace WallPlant
 {
     public class Decal : MonoBehaviour
     {
+        private static int ProgressProperty = Shader.PropertyToID("_Progress");
+        private float _progress = 0f;
+        private bool _animating = false;
         private Mesh _mesh;
         private Material _material;
+
+        void Awake()
+        {
+            Core.OnUpdate += OnUpdate;
+        }
+
+        void OnUpdate()
+        {
+            if (!_animating)
+                return;
+            _progress += WallPlantSettings.GraffitiPaintSpeed * Core.dt;
+            if (_progress >= 1f)
+            {
+                _progress = 1f;
+                _animating = false;
+            }
+            _material.SetFloat(ProgressProperty, _progress);
+        }
 
         public static Decal Create(Vector3 point, Vector3 normal)
         {
             var gameObject = new GameObject("Decal");
             var decal = gameObject.AddComponent<Decal>();
             decal.Build(point, normal);
+            DecalManager.Instance.PushDecal(decal);
             return decal;
         }
 
@@ -70,7 +92,7 @@ namespace WallPlant
             _mesh.SetUVs(0, uvs);
             _mesh.SetIndices(tris, MeshTopology.Triangles, 0);
 
-            _material = new Material(AssetAPI.GetShader(AssetAPI.ShaderNames.AmbientEnvironmentTransparent));
+            _material = new Material(Plugin.GraffitiMaterial);
 
             var filter = gameObject.AddComponent<MeshFilter>();
             filter.sharedMesh = _mesh;
@@ -78,6 +100,13 @@ namespace WallPlant
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
             renderer.sharedMaterial = _material;
+        }
+
+        public void AnimateSpray()
+        {
+            _material.SetFloat(ProgressProperty, 0f);
+            _progress = 0f;
+            _animating = true;
         }
 
         private void OnDestroy()

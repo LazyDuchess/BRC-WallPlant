@@ -10,7 +10,7 @@ namespace WallPlant
     public class WallPlantTrickHolder : MonoBehaviour
     {
         public Player Player;
-        public Player.Trick WallPlantTrick = new Player.Trick(60, 20, 10);
+        public Player.Trick WallPlantTrick = new Player.Trick(80, 20, 10);
 
         private void Awake()
         {

@@ -3,6 +3,7 @@ using BepInEx.Logging;
 using HarmonyLib;
 using Reptile;
 using System;
+using System.IO;
 using UnityEngine;
 
 namespace WallPlant
@@ -10,15 +11,20 @@ namespace WallPlant
     [BepInPlugin(GUID, Name, Version)]
     internal class Plugin : BaseUnityPlugin
     {
+        public static Material GraffitiMaterial;
         public static Plugin Instance;
-        private const string GUID = "com.LazyDuchess.BRC.WallPlant";
-        private const string Name = "Wall Plant";
-        private const string Version = "1.1.1";
+        public const string GUID = "com.LazyDuchess.BRC.WallPlant";
+        public const string Name = "Wall Plant";
+        public const string Version = "1.1.1";
         private void Awake()
         {
             Instance = this;
             try
             {
+                GraffitiDatabase.Initialize();
+                DecalManager.Initialize();
+                var wallPlantBundle = AssetBundle.LoadFromFile(Path.Combine(Path.GetDirectoryName(Info.Location), "wallplant"));
+                GraffitiMaterial = wallPlantBundle.LoadAsset<Material>("GraffitiMaterial");
                 WallPlantSettings.Initialize(Config);
                 var harmony = new Harmony(GUID);
                 harmony.PatchAll();

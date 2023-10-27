@@ -10,8 +10,11 @@ namespace WallPlant
 
     public static class WallPlantSettings
     {
-        public static int MaxStickers => _maxStickers.Value;
-        public static bool EnableStickerPlants => _enableStickerPlants.Value;
+        public static bool GraffitiPlantSlideButton => _graffitiPlantSlideButton.Value;
+        public static float GraffitiPaintSpeed => _graffitiPaintSpeed.Value;
+        public static float GraffitiSize => _graffitiSize.Value;
+        public static int MaxGraffiti => _maxGraffiti.Value;
+        public static bool EnableGraffitiPlants => _enableGraffitiPlants.Value;
         public static bool RegainAirMobility => _regainAirMobility.Value;
         public static float MaxWallAngle => _maxWallAngle.Value;
         public static float MaxJumpOffWallAngle => _maxJumpOffWallAngle.Value;
@@ -25,8 +28,11 @@ namespace WallPlant
         public static float WallPlantsUntilMaxPenalty => _wallPlantsUntilMaxPenalty.Value;
         public static int MaximumWallPlants => _maximumWallPlants.Value;
 
-        private static ConfigEntry<int> _maxStickers;
-        private static ConfigEntry<bool> _enableStickerPlants;
+        private static ConfigEntry<bool> _graffitiPlantSlideButton;
+        private static ConfigEntry<float> _graffitiPaintSpeed;
+        private static ConfigEntry<float> _graffitiSize;
+        private static ConfigEntry<int> _maxGraffiti;
+        private static ConfigEntry<bool> _enableGraffitiPlants;
         private static ConfigEntry<bool> _regainAirMobility;
         private static ConfigEntry<float> _maxWallAngle;
         private static ConfigEntry<float> _maxJumpOffWallAngle;
@@ -40,16 +46,34 @@ namespace WallPlant
 
         public static void Initialize(ConfigFile config)
         {
-            _maxStickers = config.Bind("WallPlant",
-                "MaxStickers",
-                10,
-                "Maximum amount of stickers in a level, before they will start getting cleaned up."
+            _graffitiPlantSlideButton = config.Bind("GraffitiPlant",
+                "GraffitiPlantSlideButton",
+                false,
+                "Whether to use the slide button instead of the spray button to do a graffiti plant."
                 );
 
-            _enableStickerPlants = config.Bind("WallPlant",
-                "EnableStickerPlants",
+            _graffitiPaintSpeed = config.Bind("GraffitiPlant",
+                "GraffitiPaintSpeed",
+                3f,
+                "Speed at which the graffiti gets sprayed."
+                );
+
+            _graffitiSize = config.Bind("GraffitiPlant",
+                "GraffitiSize",
+                1.5f,
+                "Size of each graffiti."
+                );
+
+            _maxGraffiti = config.Bind("GraffitiPlant",
+                "MaxGraffiti",
+                10,
+                "Maximum amount of graffiti in a level, before they will start getting cleaned up."
+                );
+
+            _enableGraffitiPlants = config.Bind("GraffitiPlant",
+                "EnableGraffitiPlants",
                 true,
-                "Whether to enable sticker plants, which can be triggered by holding down the manual/slide button while wallplanting."
+                "Whether to enable graffiti plants, which can be triggered by pressing the spray button while wallplanting."
                 );
 
             _gracePeriod = config.Bind("WallPlant",

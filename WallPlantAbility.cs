@@ -159,16 +159,20 @@ namespace WallPlant
             var decalRay = new Ray(p.transform.position + (Vector3.up * 0.5f), p.transform.forward);
             if (!Physics.Raycast(decalRay, out RaycastHit hit, 2f, _wallPlantLayerMask, QueryTriggerInteraction.Ignore))
                 return false;
-            var body = hit.collider.attachedRigidbody;
-            if (body != null)
-                return false;
+            var car = hit.collider.GetComponentInParent<Car>();
+            if (!car)
+            {
+                var body = hit.collider.attachedRigidbody;
+                if (body != null)
+                    return false;
+            }
             p.SetSpraycanState(Player.SpraycanState.SPRAY);
             p.AudioManager.PlaySfxGameplay(SfxCollectionID.GraffitiSfx, AudioClipID.Spray);
             var decal = Decal.Create(hit.point, hit.normal);
-            var graffInfo = AssetAPI.GetGraffitiArtInfo();
-            var graff = graffInfo.FindByCharacter(p.character);
-            decal.SetTexture(graff.graffitiMaterial.mainTexture);
-            decal.SetSize(1.5f);
+            decal.SetTexture(GraffitiDatabase.GetGraffitiTexture(p));
+            decal.SetSize(WallPlantSettings.GraffitiSize);
+            decal.transform.SetParent(hit.collider.transform);
+            decal.AnimateSpray();
             return true;
         }
 
@@ -225,9 +229,16 @@ namespace WallPlant
             }
             else 
             {
-
-                if (p.abilityTimer <= 0.1f && !_graffiti && !_graffitiPlaced && p.sprayButtonHeld)
-                    _graffiti = true;
+                if (WallPlantSettings.EnableGraffitiPlants)
+                {
+                    if (p.abilityTimer <= HitpauseDuration && !_graffiti && !_graffitiPlaced)
+                    {
+                        if (p.sprayButtonHeld && !WallPlantSettings.GraffitiPlantSlideButton)
+                            _graffiti = true;
+                        else if ((p.slideButtonHeld || p.slideButtonNew) && WallPlantSettings.GraffitiPlantSlideButton)
+                            _graffiti = true;
+                    }
+                }
 
                 if (_graffiti && !_graffitiPlaced)
                     _graffiti = DoGraffiti();
