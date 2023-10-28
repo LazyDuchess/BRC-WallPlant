@@ -10,11 +10,12 @@ namespace WallPlant
 
     public static class WallPlantSettings
     {
+        public static bool GraffitiPlantDefault => _graffitiPlantDefault.Value;
         public static bool GraffitiPlantSlideButton => _graffitiPlantSlideButton.Value;
         public static float GraffitiPaintSpeed => _graffitiPaintSpeed.Value;
         public static float GraffitiSize => _graffitiSize.Value;
         public static int MaxGraffiti => _maxGraffiti.Value;
-        public static bool EnableGraffitiPlants => _enableGraffitiPlants.Value;
+        public static bool EnableAlternativePlant => _enableAlternativePlant.Value;
         public static bool RegainAirMobility => _regainAirMobility.Value;
         public static float MaxWallAngle => _maxWallAngle.Value;
         public static float MaxJumpOffWallAngle => _maxJumpOffWallAngle.Value;
@@ -28,11 +29,12 @@ namespace WallPlant
         public static float WallPlantsUntilMaxPenalty => _wallPlantsUntilMaxPenalty.Value;
         public static int MaximumWallPlants => _maximumWallPlants.Value;
 
+        private static ConfigEntry<bool> _graffitiPlantDefault;
         private static ConfigEntry<bool> _graffitiPlantSlideButton;
         private static ConfigEntry<float> _graffitiPaintSpeed;
         private static ConfigEntry<float> _graffitiSize;
         private static ConfigEntry<int> _maxGraffiti;
-        private static ConfigEntry<bool> _enableGraffitiPlants;
+        private static ConfigEntry<bool> _enableAlternativePlant;
         private static ConfigEntry<bool> _regainAirMobility;
         private static ConfigEntry<float> _maxWallAngle;
         private static ConfigEntry<float> _maxJumpOffWallAngle;
@@ -46,6 +48,12 @@ namespace WallPlant
 
         public static void Initialize(ConfigFile config)
         {
+            _graffitiPlantDefault = config.Bind("GraffitiPlant",
+                "GraffitiPlantByDefault",
+                false,
+                "Whether to Graffiti Plant by default, and have to press the graf plant button to do a regular Wall Plant instead."
+                );
+
             _graffitiPlantSlideButton = config.Bind("GraffitiPlant",
                 "GraffitiPlantSlideButton",
                 false,
@@ -70,10 +78,10 @@ namespace WallPlant
                 "Maximum amount of graffiti in a level, before they will start getting cleaned up."
                 );
 
-            _enableGraffitiPlants = config.Bind("GraffitiPlant",
-                "EnableGraffitiPlants",
+            _enableAlternativePlant = config.Bind("GraffitiPlant",
+                "EnableAlternativePlant",
                 true,
-                "Whether to enable graffiti plants, which can be triggered by pressing the spray button while wallplanting."
+                "Whether to enable the alt plant. If Graffitti Plants are default, then Wall Plants will be disabled, and vice versa."
                 );
 
             _gracePeriod = config.Bind("WallPlant",

@@ -94,7 +94,7 @@ namespace WallPlant
             canStartWallrun = false;
             _didTrick = false;
             _graffitiPlaced = false;
-            _graffiti = false;
+            _graffiti = WallPlantSettings.GraffitiPlantDefault;
 
             if (WallPlantSettings.RegainAirMobility)
                 p.RegainAirMobility();
@@ -229,18 +229,31 @@ namespace WallPlant
             }
             else 
             {
-                if (WallPlantSettings.EnableGraffitiPlants)
+                if (WallPlantSettings.EnableAlternativePlant)
                 {
-                    if (p.abilityTimer <= HitpauseDuration && !_graffiti && !_graffitiPlaced)
+                    if (WallPlantSettings.GraffitiPlantDefault)
                     {
-                        if (p.sprayButtonHeld && !WallPlantSettings.GraffitiPlantSlideButton)
-                            _graffiti = true;
-                        else if ((p.slideButtonHeld || p.slideButtonNew) && WallPlantSettings.GraffitiPlantSlideButton)
-                            _graffiti = true;
+                        if (!_graffitiPlaced && _graffiti)
+                        {
+                            if (p.sprayButtonHeld && !WallPlantSettings.GraffitiPlantSlideButton)
+                                _graffiti = false;
+                            else if ((p.slideButtonHeld || p.slideButtonNew) && WallPlantSettings.GraffitiPlantSlideButton)
+                                _graffiti = false;
+                        }
+                    }
+                    else
+                    {
+                        if (p.abilityTimer <= HitpauseDuration && !_graffiti && !_graffitiPlaced)
+                        {
+                            if (p.sprayButtonHeld && !WallPlantSettings.GraffitiPlantSlideButton)
+                                _graffiti = true;
+                            else if ((p.slideButtonHeld || p.slideButtonNew) && WallPlantSettings.GraffitiPlantSlideButton)
+                                _graffiti = true;
+                        }
                     }
                 }
 
-                if (_graffiti && !_graffitiPlaced)
+                if (_graffiti && !_graffitiPlaced && p.abilityTimer > 0.1f)
                     _graffiti = DoGraffiti();
 
                 if (p.abilityTimer > HitpauseDuration)
