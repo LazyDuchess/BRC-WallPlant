@@ -1,104 +1,92 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using BepInEx;
 using CommonAPI;
+using CrewBoomAPI;
 using Reptile;
 using UnityEngine;
-using CrewBoomAPI;
 
 namespace WallPlant
 {
-    internal static class GraffitiDatabase
-    {
-        private static Dictionary<string, List<Texture2D>> CustomGraffiti = new Dictionary<string, List<Texture2D>>();
-        public static void Initialize()
-        {
-            var graffitiDir = Path.Combine(Paths.ConfigPath, Plugin.Name, "Graffiti");
+	internal static class GraffitiDatabase
+	{
+		public static void Initialize()
+		{
+			string text = Path.Combine(Paths.ConfigPath, Plugin.Name, "Graffiti");
+			if (!Directory.Exists(text))
+			{
+				Directory.CreateDirectory(text);
+				Directory.CreateDirectory(Path.Combine(text, "Global"));
+				GraffitiDatabase.WriteReadme(Path.Combine(text, "Readme.txt"));
+			}
+			foreach (string text2 in Directory.GetDirectories(text))
+			{
+				string text3 = Path.GetFileName(text2).ToLowerInvariant();
+				foreach (string text4 in Directory.GetFiles(text2, "*.png"))
+				{
+					try
+					{
+						byte[] array = File.ReadAllBytes(text4);
+						Texture2D texture2D = new Texture2D(2, 2);
+						texture2D.LoadImage(array);
+						texture2D.wrapMode = TextureWrapMode.Clamp;
+						List<Texture2D> list;
+						if (!GraffitiDatabase.CustomGraffiti.TryGetValue(text3, out list))
+						{
+							list = new List<Texture2D>();
+						}
+						list.Add(texture2D);
+						GraffitiDatabase.CustomGraffiti[text3] = list;
+						Plugin.Instance.GetLogger().LogInfo("Loaded custom graffiti " + Path.GetFileName(text4) + " for character " + text3);
+					}
+					catch (Exception ex)
+					{
+						Plugin.Instance.GetLogger().LogError(string.Format("Problem loading graffiti {0}: {1}", Path.GetFileName(text4), ex));
+					}
+				}
+			}
+		}
 
-            if (!Directory.Exists(graffitiDir))
-            {
-                Directory.CreateDirectory(graffitiDir);
-                Directory.CreateDirectory(Path.Combine(graffitiDir, "Global"));
-                WriteReadme(Path.Combine(graffitiDir, "Readme.txt"));
-            }
+		private static void WriteReadme(string filename)
+		{
+			StringBuilder stringBuilder = new StringBuilder();
+			stringBuilder.AppendLine("Create subfolders here and put PNG images inside them to replace the Graffiti Plant graffiti for each character, using their internal names. For CrewBoom characters, create a folder with their GUID as the name.");
+			stringBuilder.AppendLine(string.Format("For instance, if you create a folder named \"{0}\" and add 2 PNG images with any filename inside, when you Graffiti plant as {1} a random image will be picked from that folder to place.", Characters.frank, Characters.frank));
+			stringBuilder.AppendLine("A \"Global\" folder was automatically created for you. PNG images placed in this folder will override the graffiti for every character, unless they have their own subfolder here.");
+			stringBuilder.AppendLine("Possible character internal names are as follows:");
+			foreach (object obj in Enum.GetValues(typeof(Characters)))
+			{
+				Characters characters = (Characters)obj;
+				if (characters != Characters.MAX && characters != Characters.NONE)
+				{
+					stringBuilder.AppendLine(characters.ToString());
+				}
+			}
+			File.WriteAllText(filename, stringBuilder.ToString());
+		}
 
-            var folders = Directory.GetDirectories(graffitiDir);
+		public static Texture GetGraffitiTexture(Player player)
+		{
+			string text = player.character.ToString().ToLowerInvariant();
+			Guid guid;
+			if (player.character > Characters.MAX && CrewBoomAPIDatabase.IsInitialized && CrewBoomAPIDatabase.GetUserGuidForCharacter((int)player.character, out guid))
+			{
+				text = guid.ToString().ToLowerInvariant();
+			}
+			List<Texture2D> list;
+			if (!GraffitiDatabase.CustomGraffiti.TryGetValue(text, out list) && !GraffitiDatabase.CustomGraffiti.TryGetValue("global", out list))
+			{
+				list = null;
+			}
+			if (list == null)
+			{
+				return AssetAPI.GetGraffitiArtInfo().FindByCharacter(player.character).graffitiMaterial.mainTexture;
+			}
+			return list[UnityEngine.Random.Range(0, list.Count)];
+		}
 
-            foreach(var folder in folders)
-            {
-                var characterID = Path.GetFileName(folder).ToLowerInvariant();
-                var images = Directory.GetFiles(folder, "*.png");
-
-                foreach (var image in images)
-                {
-                    try
-                    {
-                        var imageBytes = File.ReadAllBytes(image);
-                        var tex = new Texture2D(2, 2);
-                        tex.LoadImage(imageBytes);
-                        tex.wrapMode = TextureWrapMode.Clamp;
-
-                        if (!CustomGraffiti.TryGetValue(characterID, out List<Texture2D> texList))
-                            texList = new List<Texture2D>();
-
-                        texList.Add(tex);
-                        CustomGraffiti[characterID] = texList;
-                        Plugin.Instance.GetLogger().LogInfo($"Loaded custom graffiti {Path.GetFileName(image)} for character {characterID}");
-                    }
-                    catch (Exception e)
-                    {
-                        Plugin.Instance.GetLogger().LogError($"Problem loading graffiti {Path.GetFileName(image)}: {e}");
-                    }
-                }
-            }
-        }
-
-        static void WriteReadme(string filename)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("Create subfolders here and put PNG images inside them to replace the Graffiti Plant graffiti for each character, using their internal names. For CrewBoom characters, create a folder with their GUID as the name.");
-            sb.AppendLine($"For instance, if you create a folder named \"{Characters.frank}\" and add 2 PNG images with any filename inside, when you Graffiti plant as {Characters.frank} a random image will be picked from that folder to place.");
-            sb.AppendLine("A \"Global\" folder was automatically created for you. PNG images placed in this folder will override the graffiti for every character, unless they have their own subfolder here.");
-            sb.AppendLine("Possible character internal names are as follows:");
-            var allCharacters = Enum.GetValues(typeof(Characters));
-            foreach(Characters character in allCharacters)
-            {
-                if (character != Characters.MAX && character != Characters.NONE)
-                    sb.AppendLine(character.ToString());
-            }
-            File.WriteAllText(filename, sb.ToString());
-        }
-
-        public static Texture GetGraffitiTexture(Player player)
-        {
-            var characterID = player.character.ToString().ToLowerInvariant();
-
-            if (player.character > Characters.MAX && CrewBoomAPIDatabase.IsInitialized)
-            {
-                if (CrewBoomAPIDatabase.GetUserGuidForCharacter((int)player.character, out Guid crewBoomGUID))
-                    characterID = crewBoomGUID.ToString().ToLowerInvariant();
-            }
-            
-            List<Texture2D> graffitiList;
-
-            if (!CustomGraffiti.TryGetValue(characterID, out graffitiList))
-            {
-                if (!CustomGraffiti.TryGetValue("global", out graffitiList))
-                    graffitiList = null;
-            }
-
-            if (graffitiList == null)
-            {
-                var graffInfo = AssetAPI.GetGraffitiArtInfo();
-                var graff = graffInfo.FindByCharacter(player.character);
-                return graff.graffitiMaterial.mainTexture;
-            }
-
-            return graffitiList[UnityEngine.Random.Range(0, graffitiList.Count)];
-        }
-    }
+		private static Dictionary<string, List<Texture2D>> CustomGraffiti = new Dictionary<string, List<Texture2D>>();
+	}
 }

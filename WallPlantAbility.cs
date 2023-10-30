@@ -168,9 +168,8 @@ namespace WallPlant
             }
             p.SetSpraycanState(Player.SpraycanState.SPRAY);
             p.AudioManager.PlaySfxGameplay(SfxCollectionID.GraffitiSfx, AudioClipID.Spray);
-            var decal = Decal.Create(hit.point, hit.normal);
+            Decal decal = Decal.Create(hit.point, -hit.normal, WallPlantSettings.GraffitiSize, this._wallPlantLayerMask);
             decal.SetTexture(GraffitiDatabase.GetGraffitiTexture(p));
-            decal.SetSize(WallPlantSettings.GraffitiSize);
             decal.transform.SetParent(hit.collider.transform);
             decal.AnimateSpray();
             return true;
