@@ -16,6 +16,8 @@ namespace WallPlant
         public static float GraffitiSize => _graffitiSize.Value;
         public static int MaxGraffiti => _maxGraffiti.Value;
         public static bool EnableAlternativePlant => _enableAlternativePlant.Value;
+        public static bool AbsoluteSpeed => _absoluteSpeed.Value;
+        public static float RaycastDistance => _raycastDistance.Value;
         public static bool RegainAirMobility => _regainAirMobility.Value;
         public static float MaxWallAngle => _maxWallAngle.Value;
         public static float MaxJumpOffWallAngle => _maxJumpOffWallAngle.Value;
@@ -35,6 +37,8 @@ namespace WallPlant
         private static ConfigEntry<float> _graffitiSize;
         private static ConfigEntry<int> _maxGraffiti;
         private static ConfigEntry<bool> _enableAlternativePlant;
+        private static ConfigEntry<bool> _absoluteSpeed;
+        private static ConfigEntry<float> _raycastDistance;
         private static ConfigEntry<bool> _regainAirMobility;
         private static ConfigEntry<float> _maxWallAngle;
         private static ConfigEntry<float> _maxJumpOffWallAngle;
@@ -83,6 +87,18 @@ namespace WallPlant
                 true,
                 "Whether to enable the alt plant. If Graffitti Plants are default, then Wall Plants will be disabled, and vice versa."
                 );
+
+            _absoluteSpeed = config.Bind("WallPlant",
+                "Absolute Speed",
+                false,
+                "If this is true, then your absolute speed will be used for wall jumping regardless of direction rather than just your speed directly into the wall surface."
+                );
+
+            _raycastDistance = config.Bind("WallPlant",
+               "RayCastDistance",
+               2f,
+               "Distance to look for walls. The higher this number is the further away you can be from walls and still be able to wallplant."
+               );
 
             _gracePeriod = config.Bind("WallPlant",
                 "GracePeriod",

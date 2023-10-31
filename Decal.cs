@@ -63,51 +63,51 @@ namespace WallPlant
 
 		public void SetTexture(Texture texture)
 		{
-			this._material.mainTexture = texture;
+			_material.mainTexture = texture;
 		}
 
 		private void MakeDecalMesh(Transform originalTransform, Mesh mesh)
 		{
 			GameObject gameObject = new GameObject("Decal Mesh");
-			this._decals.Add(gameObject);
-			gameObject.transform.SetParent(originalTransform.parent);
-			gameObject.transform.localPosition = originalTransform.localPosition;
-			gameObject.transform.localRotation = originalTransform.localRotation;
-			gameObject.transform.localScale = originalTransform.localScale;
+			_decals.Add(gameObject);
+			gameObject.transform.SetParent(originalTransform);
+			gameObject.transform.localPosition = Vector3.zero;
+			gameObject.transform.localRotation = Quaternion.identity;
+			gameObject.transform.localScale = Vector3.one;
 			MeshFilter meshFilter = gameObject.AddComponent<MeshFilter>();
 			Renderer renderer = gameObject.AddComponent<MeshRenderer>();
 			meshFilter.sharedMesh = mesh;
-			renderer.sharedMaterial = this._material;
+			renderer.sharedMaterial = _material;
 		}
 
 		public void Build(LayerMask affectedLayers)
 		{
-			this._material = new Material(Plugin.GraffitiMaterial);
+			_material = new Material(Plugin.GraffitiMaterial);
 			Bounds bounds = new Bounds(base.transform.position, base.transform.localScale);
 			foreach (LevelMesh levelMesh in DecalManager.Instance.GetLevelMeshesIntersectingBounds(bounds, affectedLayers))
 			{
-				this.MakeDecalMesh(levelMesh.Renderer.transform, levelMesh.Mesh);
+				MakeDecalMesh(levelMesh.Renderer.transform, levelMesh.Mesh);
 			}
 		}
 
 		public void AnimateSpray()
 		{
-			this._material.SetFloat(Decal.ProgressProperty, 0f);
-			this._progress = 0f;
-			this._animating = true;
+			_material.SetFloat(Decal.ProgressProperty, 0f);
+			_progress = 0f;
+			_animating = true;
 		}
 
 		private void OnDestroy()
 		{
-			Core.OnUpdate -= this.OnUpdate;
-			foreach (GameObject gameObject in this._decals)
+			Core.OnUpdate -= OnUpdate;
+			foreach (GameObject gameObject in _decals)
 			{
 				if (!(gameObject == null))
 				{
 					UnityEngine.Object.Destroy(gameObject);
 				}
 			}
-			UnityEngine.Object.Destroy(this._material);
+			UnityEngine.Object.Destroy(_material);
 		}
 
 		private static int ProgressProperty = Shader.PropertyToID("_Progress");

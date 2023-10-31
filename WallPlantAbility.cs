@@ -125,8 +125,17 @@ namespace WallPlant
                         var velocityTowardsWall = Vector3.Dot(p.motor.velocity, -wallNormal);
                         if (velocityTowardsWall >= WallPlantSettings.MinimumSpeed)
                         {
-                            if (velocityTowardsWall > _speedIntoWall)
-                                _speedIntoWall = velocityTowardsWall;
+                            if (WallPlantSettings.AbsoluteSpeed)
+                            {
+                                var absoluteVelocity = p.motor.velocity.magnitude;
+                                if (absoluteVelocity > _speedIntoWall)
+                                    _speedIntoWall = absoluteVelocity;
+                            }
+                            else
+                            {
+                                if (velocityTowardsWall > _speedIntoWall)
+                                    _speedIntoWall = velocityTowardsWall;
+                            }
                             _timeSinceReachedMinSpeed = 0f;
                             return;
                         }
@@ -159,16 +168,11 @@ namespace WallPlant
             var decalRay = new Ray(p.transform.position + (Vector3.up * 0.5f), p.transform.forward);
             if (!Physics.Raycast(decalRay, out RaycastHit hit, 2f, _wallPlantLayerMask, QueryTriggerInteraction.Ignore))
                 return false;
-            var car = hit.collider.GetComponentInParent<Car>();
-            if (!car)
-            {
-                var body = hit.collider.attachedRigidbody;
-                if (body != null)
-                    return false;
-            }
+            if (hit.collider.attachedRigidbody != null)
+                return false;
             p.SetSpraycanState(Player.SpraycanState.SPRAY);
             p.AudioManager.PlaySfxGameplay(SfxCollectionID.GraffitiSfx, AudioClipID.Spray);
-            Decal decal = Decal.Create(hit.point, -hit.normal, WallPlantSettings.GraffitiSize, this._wallPlantLayerMask);
+            Decal decal = Decal.Create(hit.point, -hit.normal, WallPlantSettings.GraffitiSize, _wallPlantLayerMask);
             decal.SetTexture(GraffitiDatabase.GetGraffitiTexture(p));
             decal.transform.SetParent(hit.collider.transform);
             decal.AnimateSpray();
@@ -207,20 +211,8 @@ namespace WallPlant
                 acc = p.stats.airAcc + 10f;
                 targetSpeed = p.stats.walkSpeed + 5f;
                 normalRotation = true;
-                // Allow dashes and tricks mid wall plant.
-                if (p.abilityTimer > 0.5f)
-                {
-                    if (p.airDashAbility.CheckActivation())
-                    {
-                        return;
-                    }
-                    if (p.airTrickAbility.CheckActivation())
-                    {
-                        return;
-                    }
-                }
                 // End.
-                if (p.abilityTimer > 0.8f)
+                if (p.abilityTimer > 0.5f)
                 {
                     p.StopCurrentAbility();
                     return;
@@ -343,7 +335,6 @@ namespace WallPlant
             normal = Vector3.zero;
 
             var raySeparation = 0.33f;
-            var rayDistance = 1.5f;
             var collisionSize = 0.5f;
 
             var rayAmount = 0;
@@ -355,7 +346,7 @@ namespace WallPlant
             {
                 rayAmount++;
                 var ray = new Ray(p.transform.position + (Vector3.up * i) + (Vector3.up * 0.5f), p.motor.dir);
-                if (!Physics.Raycast(ray, out RaycastHit hit, rayDistance, ~0, QueryTriggerInteraction.Ignore))
+                if (!Physics.Raycast(ray, out RaycastHit hit, WallPlantSettings.RaycastDistance, ~0, QueryTriggerInteraction.Ignore))
                     return false;
 
                 //Plugin.Instance.GetLogger().LogInfo($"Hit {hit.collider.gameObject.name}, layer: {hit.collider.gameObject.layer}, tag: {hit.collider.gameObject.tag}");
