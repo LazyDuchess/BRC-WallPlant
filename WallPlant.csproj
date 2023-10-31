@@ -28,9 +28,6 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>lib\Assembly-CSharp-publicized.dll</HintPath>
     </Reference>
-    <Reference Include="CommonAPI">
-      <HintPath>lib\CommonAPI.dll</HintPath>
-    </Reference>
     <Reference Include="CrewBoomAPI">
       <HintPath>lib\CrewBoomAPI.dll</HintPath>
     </Reference>

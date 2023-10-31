@@ -15,7 +15,7 @@ namespace WallPlant
         public static Plugin Instance;
         public const string GUID = "com.LazyDuchess.BRC.WallPlant";
         public const string Name = "Wall Plant";
-        public const string Version = "2.3.0";
+        public const string Version = "2.3.1";
         private void Awake()
         {
             Instance = this;
@@ -39,6 +39,13 @@ namespace WallPlant
         public ManualLogSource GetLogger()
         {
             return Logger;
+        }
+
+        public static GraffitiArtInfo GetGraffitiArtInfo()
+        {
+            var assets = Core.Instance.Assets;
+            var grafArtInfo = assets.LoadAssetFromBundle<GraffitiArtInfo>("graffiti", "GraffitiArtInfo");
+            return grafArtInfo;
         }
     }
 }

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using BepInEx;
-using CommonAPI;
 using CrewBoomAPI;
 using Reptile;
 using UnityEngine;
@@ -82,7 +81,7 @@ namespace WallPlant
 			}
 			if (list == null)
 			{
-				return AssetAPI.GetGraffitiArtInfo().FindByCharacter(player.character).graffitiMaterial.mainTexture;
+				return Plugin.GetGraffitiArtInfo().FindByCharacter(player.character).graffitiMaterial.mainTexture;
 			}
 			return list[UnityEngine.Random.Range(0, list.Count)];
 		}
