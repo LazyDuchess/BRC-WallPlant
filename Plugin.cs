@@ -5,17 +5,20 @@ using Reptile;
 using System;
 using System.IO;
 using UnityEngine;
+using BepInEx.Bootstrap;
+using System.Linq;
 
 namespace WallPlant
 {
     [BepInPlugin(GUID, Name, Version)]
     internal class Plugin : BaseUnityPlugin
     {
+        private const string CrewBoomGUID = "CrewBoom";
         public static Material GraffitiMaterial;
         public static Plugin Instance;
         public const string GUID = "com.LazyDuchess.BRC.WallPlant";
         public const string Name = "Wall Plant";
-        public const string Version = "2.3.1";
+        public const string Version = "2.3.3";
         private void Awake()
         {
             Instance = this;
@@ -46,6 +49,11 @@ namespace WallPlant
             var assets = Core.Instance.Assets;
             var grafArtInfo = assets.LoadAssetFromBundle<GraffitiArtInfo>("graffiti", "GraffitiArtInfo");
             return grafArtInfo;
+        }
+
+        internal static bool IsCrewBoomInstalled()
+        {
+            return Chainloader.PluginInfos.Keys.Any(x => x == CrewBoomGUID);
         }
     }
 }

@@ -27,9 +27,11 @@
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
       <HintPath>lib\Assembly-CSharp-publicized.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="CrewBoomAPI">
       <HintPath>lib\CrewBoomAPI.dll</HintPath>
+      <Private>false</Private>
     </Reference>
   </ItemGroup>
 </Project>

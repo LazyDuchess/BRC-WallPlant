@@ -69,10 +69,13 @@ namespace WallPlant
 		public static Texture GetGraffitiTexture(Player player)
 		{
 			string text = player.character.ToString().ToLowerInvariant();
-			Guid guid;
-			if (player.character > Characters.MAX && CrewBoomAPIDatabase.IsInitialized && CrewBoomAPIDatabase.GetUserGuidForCharacter((int)player.character, out guid))
+			if (Plugin.IsCrewBoomInstalled())
 			{
-				text = guid.ToString().ToLowerInvariant();
+				Guid guid;
+				if (player.character > Characters.MAX && CrewBoomAPIDatabase.IsInitialized && CrewBoomAPIDatabase.GetUserGuidForCharacter((int)player.character, out guid))
+				{
+					text = guid.ToString().ToLowerInvariant();
+				}
 			}
 			List<Texture2D> list;
 			if (!GraffitiDatabase.CustomGraffiti.TryGetValue(text, out list) && !GraffitiDatabase.CustomGraffiti.TryGetValue("global", out list))
