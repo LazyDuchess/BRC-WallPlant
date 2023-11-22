@@ -75,25 +75,26 @@ namespace WallPlant
 			return GetGraffitiTexture(chars);
 		}
 
+		private static void GetinternalNameAndCharacterForCrewBoomCharacter(ref Characters character, ref string text)
+        {
+			if (CrewBoomAPIDatabase.IsInitialized && CrewBoomAPIDatabase.GetUserGuidForCharacter((int)character, out var guid))
+			{
+				var path = CrewBoom.CharacterDatabase._characterBundlePaths[guid];
+				text = Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
+			}
+			else
+			{
+				character = Characters.metalHead;
+				text = "metalhead";
+			}
+		}
+
 		public static Texture GetGraffitiTexture(Characters character)
         {
 			string text = character.ToString().ToLowerInvariant();
-			if (Plugin.IsCrewBoomInstalled())
+			if (Plugin.IsCrewBoomInstalled() && character >= Characters.MAX)
 			{
-				Guid guid;
-				if (character > Characters.MAX)
-				{
-					if (CrewBoomAPIDatabase.IsInitialized && CrewBoomAPIDatabase.GetUserGuidForCharacter((int)character, out guid))
-					{
-						var path = CrewBoom.CharacterDatabase._characterBundlePaths[guid];
-						text = Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
-					}
-					else
-                    {
-						character = Characters.metalHead;
-						text = "metalhead";
-                    }
-				}
+				GetinternalNameAndCharacterForCrewBoomCharacter(ref character, ref text);
 			}
 			List<Texture2D> list;
 			if (!GraffitiDatabase.CustomGraffiti.TryGetValue(text, out list) && !GraffitiDatabase.CustomGraffiti.TryGetValue("global", out list))

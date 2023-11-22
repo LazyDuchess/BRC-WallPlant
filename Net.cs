@@ -11,6 +11,121 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace WallPlant
 {
+    internal class NetDecal
+    {
+        public Characters Character
+        {
+            get
+            {
+                if (!UsingCustomCharacter)
+                    return VanillaCharacter;
+                if (!Plugin.IsCrewBoomInstalled())
+                    return Characters.metalHead;
+                return ReturnCrewBoomCharacter();
+
+                Characters ReturnCrewBoomCharacter()
+                {
+                    if (!CrewBoom.CharacterDatabase.GetCharacterValueFromGuid(CrewBoomGUID, out var character))
+                        return Characters.metalHead;
+                    return character;
+                }
+            }
+        }
+        public bool UsingCustomCharacter = false;
+        public Characters VanillaCharacter = Characters.metalHead;
+        public Guid CrewBoomGUID;
+        public Vector3 Point;
+        public Vector3 Normal;
+        public float Size = 1.5f;
+
+        public NetDecal(Characters character, Vector3 point, Vector3 normal, float size)
+        {
+            UsingCustomCharacter = false;
+            if (character > Characters.MAX)
+            {
+                VanillaCharacter = Characters.metalHead;
+                if (Plugin.IsCrewBoomInstalled())
+                    CrewBoomStuff();
+            }
+            Point = point;
+            Normal = normal;
+            Size = Mathf.Clamp(size, 0.1f, 15f);
+
+            void CrewBoomStuff()
+            {
+                if (CrewBoomAPI.CrewBoomAPIDatabase.GetUserGuidForCharacter((int)character, out var guid))
+                {
+                    UsingCustomCharacter = true;
+                    CrewBoomGUID = guid;
+                }
+            }
+        }
+
+        private NetDecal()
+        {
+        }
+
+        public static NetDecal Read(BinaryReader reader)
+        {
+            var netDecal = new NetDecal();
+            var result = netDecal.Deserialize(reader);
+            if (result)
+                return netDecal;
+            return null;
+        }
+
+        public bool Deserialize(BinaryReader reader)
+        {
+            var version = reader.ReadByte();
+            if (version > 0)
+            {
+                Debug.LogError("Got a wallplant decal from a future version, ignoring.");
+                return false;
+            }
+            UsingCustomCharacter = !reader.ReadBoolean();
+            if (!UsingCustomCharacter)
+                VanillaCharacter = (Characters)reader.ReadInt32();
+            else
+            {
+                CrewBoomGUID = Guid.Parse(reader.ReadString());
+            }
+            var affectedLayers = (LayerMask)reader.ReadInt32();
+            Size = Mathf.Clamp(reader.ReadSingle(), 0.1f, 15f);
+            Point = ReadVector3(reader);
+            Normal = Vector3.Normalize(ReadVector3(reader));
+            reader.Close();
+            return true;
+        }
+
+        private static Vector3 ReadVector3(BinaryReader reader)
+        {
+            var x = reader.ReadSingle();
+            var y = reader.ReadSingle();
+            var z = reader.ReadSingle();
+            return new Vector3(x, y, z);
+        }
+
+        public void Serialize(BinaryWriter writer)
+        {
+            writer.Write((byte)0);
+            writer.Write(!UsingCustomCharacter);
+            if (!UsingCustomCharacter)
+                writer.Write((int)VanillaCharacter);
+            else
+                writer.Write(CrewBoomGUID.ToString());
+            writer.Write((int)WallPlantAbility.WallPlantLayerMask);
+            writer.Write(Size);
+            WriteVector3(writer, Point);
+            WriteVector3(writer, Normal);
+        }
+
+        private static void WriteVector3(BinaryWriter writer, Vector3 vector)
+        {
+            writer.Write(vector.x);
+            writer.Write(vector.y);
+            writer.Write(vector.z);
+        }
+    }
     internal static class Net
     {
         public static void Initialize()
@@ -18,6 +133,13 @@ namespace WallPlant
             if (!Plugin.IsSlopCrewInstalled())
                 return;
             APIManager.API.OnCustomPacketReceived += OnDecalReceived;
+            StageManager.OnStagePostInitialization += OnStagePostInitialization;
+        }
+
+        private static void OnStagePostInitialization()
+        {
+            Debug.Log($"SlopCrew connected postinit: {APIManager.API.Connected}");
+            Debug.Log($"SlopCrew Playa Count: {APIManager.API.PlayerCount}");
         }
 
         public static void SendDecal(Characters character, Vector3 point, Vector3 normal, float size, LayerMask affectedLayers)
@@ -26,38 +148,12 @@ namespace WallPlant
                 return;
             var ms = new MemoryStream();
             var writer = new BinaryWriter(ms);
-            // version
-            writer.Write((byte)0);
-            var isBaseCharacter = character < Characters.MAX;
-            if (!Plugin.IsCrewBoomInstalled())
-                isBaseCharacter = true;
-            writer.Write(isBaseCharacter);
-            if (isBaseCharacter)
-                writer.Write((int)character);
-            else
-            {
-                if (!CrewBoomAPI.CrewBoomAPIDatabase.GetUserGuidForCharacter((int)character, out var guid))
-                {
-                    writer.Close();
-                    return;
-                }
-                writer.Write(guid.ToString());
-            }
-            writer.Write((int)affectedLayers);
-            writer.Write(size);
-            WriteVector3(writer, point);
-            WriteVector3(writer, normal);
+            var decal = new NetDecal(character, point, normal, size);
+            decal.Serialize(writer);
             writer.Flush();
             var data = ms.ToArray();
             APIManager.API.SendCustomPacket($"{PluginInfo.PLUGIN_GUID}-Decal", data);
             writer.Close();
-        }
-
-        private static void WriteVector3(BinaryWriter writer, Vector3 vector)
-        {
-            writer.Write(vector.x);
-            writer.Write(vector.y);
-            writer.Write(vector.z);
         }
 
         public static void OnDecalReceived(uint player, string packetId, byte[] data)
@@ -69,35 +165,14 @@ namespace WallPlant
                 return;
             var ms = new MemoryStream(data);
             var reader = new BinaryReader(ms);
-            var version = reader.ReadByte();
-            if (version > 0)
+            var netDecal = NetDecal.Read(reader);
+            if (netDecal == null)
             {
-                Debug.LogError("Got a wallplant decal from a future version, ignoring.");
+                reader.Close();
                 return;
             }
-            var isBaseCharacter = reader.ReadBoolean();
-            var character = Characters.metalHead;
-            if (isBaseCharacter)
-                character = (Characters)reader.ReadInt32();
-            else
-            {
-                if (Plugin.IsCrewBoomInstalled())
-                {
-                    var characterGuid = reader.ReadString();
-                    if (Guid.TryParse(characterGuid, out Guid guid))
-                    {
-                        if (!CrewBoom.CharacterDatabase.GetCharacterValueFromGuid(guid, out character))
-                            character = Characters.metalHead;
-                    }
-                }
-            }
-            var affectedLayers = (LayerMask)reader.ReadInt32();
-            var size = reader.ReadSingle();
-            size = Mathf.Clamp(size, 0.1f, 10f);
-            var point = ReadVector3(reader);
-            var normal = Vector3.Normalize(ReadVector3(reader));
-            var decal = Decal.Create(point, normal, size, affectedLayers);
-            decal.SetTexture(GraffitiDatabase.GetGraffitiTexture(character));
+            var decal = Decal.Create(netDecal.Point, netDecal.Normal, netDecal.Size, WallPlantAbility.WallPlantLayerMask);
+            decal.SetTexture(GraffitiDatabase.GetGraffitiTexture(netDecal.Character));
             decal.AnimateSpray();
             reader.Close();
         }

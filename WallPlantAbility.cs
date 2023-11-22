@@ -9,6 +9,7 @@ namespace WallPlant
     // Wall plant ability itself.
     public class WallPlantAbility : Ability
     {
+        public static LayerMask WallPlantLayerMask = (1 << 0) | (1 << 10) | (1 << 4);
         /// <summary>
         /// Keep track of how many times we've wall planted without grinding/wallrunning/landing/etc. Subsequent wall plants will get weaker until we hit the limit.
         /// </summary>
@@ -43,14 +44,11 @@ namespace WallPlant
         private bool _graffiti = false;
         private bool _graffitiPlaced = false;
 
-        private LayerMask _wallPlantLayerMask;
-
         public WallPlantAbility(Player player) : base(player)
         {
             // Need to process this ability before air dashing, so we insert at the beginning.
             p.abilities.Remove(this);
             p.abilities.Insert(0, this);
-            _wallPlantLayerMask = (1 << 0) | (1 << 10) | (1 << 4);
         }
 
         // Helper function to return WallPlantAbility from a player.
@@ -154,7 +152,7 @@ namespace WallPlant
         // Checks if a gameobject is valid for a wall plant.
         private bool ValidSurface(GameObject obj)
         {
-            if (((1 << obj.layer) & _wallPlantLayerMask) == 0)
+            if (((1 << obj.layer) & WallPlantLayerMask) == 0)
                 return false;
             if (!obj.CompareTag("Untagged"))
                 return false;
@@ -165,14 +163,15 @@ namespace WallPlant
         {
             _graffitiPlaced = true;
             var decalRay = new Ray(p.transform.position + (Vector3.up * 0.5f), p.transform.forward);
-            if (!Physics.Raycast(decalRay, out RaycastHit hit, 2f, _wallPlantLayerMask, QueryTriggerInteraction.Ignore))
+            if (!Physics.Raycast(decalRay, out RaycastHit hit, 2f, WallPlantLayerMask, QueryTriggerInteraction.Ignore))
                 return false;
             if (hit.collider.attachedRigidbody != null)
                 return false;
             p.SetSpraycanState(Player.SpraycanState.SPRAY);
             p.AudioManager.PlaySfxGameplay(SfxCollectionID.GraffitiSfx, AudioClipID.Spray);
-            Decal decal = Decal.Create(hit.point, -hit.normal, WallPlantSettings.GraffitiSize, _wallPlantLayerMask);
-            Net.SendDecal(p.character, hit.point, -hit.normal, WallPlantSettings.GraffitiSize, _wallPlantLayerMask);
+            Decal decal = Decal.Create(hit.point, -hit.normal, WallPlantSettings.GraffitiSize, WallPlantLayerMask);
+            if (Plugin.IsSlopCrewInstalled())
+                Net.SendDecal(p.character, hit.point, -hit.normal, WallPlantSettings.GraffitiSize, WallPlantLayerMask);
             decal.SetTexture(GraffitiDatabase.GetGraffitiTexture(p));
             decal.transform.SetParent(hit.collider.transform);
             decal.AnimateSpray();

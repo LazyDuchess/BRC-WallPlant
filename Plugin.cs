@@ -20,14 +20,15 @@ namespace WallPlant
         public static Plugin Instance;
         public const string GUID = "com.LazyDuchess.BRC.WallPlant";
         public const string Name = "Wall Plant";
-        public const string Version = "2.4.1";
+        public const string Version = "2.4.2";
 
         private void Awake()
         {
             Instance = this;
             try
             {
-                Net.Initialize();
+                if (IsSlopCrewInstalled())
+                    Net.Initialize();
                 GraffitiDatabase.Initialize();
                 DecalManager.Initialize();
                 var wallPlantBundle = AssetBundle.LoadFromFile(Path.Combine(Path.GetDirectoryName(Info.Location), "wallplant"));
