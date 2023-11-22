@@ -78,7 +78,7 @@ namespace WallPlant
 
             _maxGraffiti = config.Bind("GraffitiPlant",
                 "MaxGraffiti",
-                10,
+                20,
                 "Maximum amount of graffiti in a level, before they will start getting cleaned up."
                 );
 

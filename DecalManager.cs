@@ -62,7 +62,7 @@ namespace WallPlant
 
 		public void PushDecal(Decal decal)
 		{
-			if (this._decals.Count >= WallPlantSettings.MaxGraffiti)
+			while (this._decals.Count >= WallPlantSettings.MaxGraffiti)
 			{
 				Decal decal2 = this._decals.Dequeue();
 				if (decal2 != null)

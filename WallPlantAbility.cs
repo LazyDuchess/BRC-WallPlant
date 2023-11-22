@@ -172,6 +172,7 @@ namespace WallPlant
             p.SetSpraycanState(Player.SpraycanState.SPRAY);
             p.AudioManager.PlaySfxGameplay(SfxCollectionID.GraffitiSfx, AudioClipID.Spray);
             Decal decal = Decal.Create(hit.point, -hit.normal, WallPlantSettings.GraffitiSize, _wallPlantLayerMask);
+            Net.SendDecal(p.character, hit.point, -hit.normal, WallPlantSettings.GraffitiSize, _wallPlantLayerMask);
             decal.SetTexture(GraffitiDatabase.GetGraffitiTexture(p));
             decal.transform.SetParent(hit.collider.transform);
             decal.AnimateSpray();

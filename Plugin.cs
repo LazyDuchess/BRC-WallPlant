@@ -11,19 +11,23 @@ using System.Linq;
 namespace WallPlant
 {
     [BepInPlugin(GUID, Name, Version)]
+    [BepInDependency(SlopCrewGUID, BepInDependency.DependencyFlags.SoftDependency)]
     internal class Plugin : BaseUnityPlugin
     {
         private const string CrewBoomGUID = "CrewBoom";
+        private const string SlopCrewGUID = "SlopCrew.Plugin";
         public static Material GraffitiMaterial;
         public static Plugin Instance;
         public const string GUID = "com.LazyDuchess.BRC.WallPlant";
         public const string Name = "Wall Plant";
-        public const string Version = "2.3.3";
+        public const string Version = "2.4.1";
+
         private void Awake()
         {
             Instance = this;
             try
             {
+                Net.Initialize();
                 GraffitiDatabase.Initialize();
                 DecalManager.Initialize();
                 var wallPlantBundle = AssetBundle.LoadFromFile(Path.Combine(Path.GetDirectoryName(Info.Location), "wallplant"));
@@ -54,6 +58,11 @@ namespace WallPlant
         internal static bool IsCrewBoomInstalled()
         {
             return Chainloader.PluginInfos.Keys.Any(x => x == CrewBoomGUID);
+        }
+
+        internal static bool IsSlopCrewInstalled()
+        {
+            return Chainloader.PluginInfos.Keys.Any(x => x == SlopCrewGUID);
         }
     }
 }

@@ -51,7 +51,7 @@ namespace WallPlant
 		private static void WriteReadme(string filename)
 		{
 			StringBuilder stringBuilder = new StringBuilder();
-			stringBuilder.AppendLine("Create subfolders here and put PNG images inside them to replace the Graffiti Plant graffiti for each character, using their internal names. For CrewBoom characters, create a folder with their GUID as the name.");
+			stringBuilder.AppendLine("Create subfolders here and put PNG images inside them to replace the Graffiti Plant graffiti for each character, using their internal names. For CrewBoom characters, create a folder with their filename as the name (minus the .cbb extension).");
 			stringBuilder.AppendLine(string.Format("For instance, if you create a folder named \"{0}\" and add 2 PNG images with any filename inside, when you Graffiti plant as {1} a random image will be picked from that folder to place.", Characters.frank, Characters.frank));
 			stringBuilder.AppendLine("A \"Global\" folder was automatically created for you. PNG images placed in this folder will override the graffiti for every character, unless they have their own subfolder here.");
 			stringBuilder.AppendLine("Possible character internal names are as follows:");
@@ -66,15 +66,33 @@ namespace WallPlant
 			File.WriteAllText(filename, stringBuilder.ToString());
 		}
 
-		public static Texture GetGraffitiTexture(Player player)
-		{
-			string text = player.character.ToString().ToLowerInvariant();
+		public static Texture GetCrewBoomGraffitiTexture(Guid guid)
+        {
+			if (!Plugin.IsCrewBoomInstalled())
+				return GetGraffitiTexture(Characters.metalHead);
+			if (!CrewBoom.CharacterDatabase.GetCharacterValueFromGuid(guid, out var chars))
+				return GetGraffitiTexture(Characters.metalHead);
+			return GetGraffitiTexture(chars);
+		}
+
+		public static Texture GetGraffitiTexture(Characters character)
+        {
+			string text = character.ToString().ToLowerInvariant();
 			if (Plugin.IsCrewBoomInstalled())
 			{
 				Guid guid;
-				if (player.character > Characters.MAX && CrewBoomAPIDatabase.IsInitialized && CrewBoomAPIDatabase.GetUserGuidForCharacter((int)player.character, out guid))
+				if (character > Characters.MAX)
 				{
-					text = guid.ToString().ToLowerInvariant();
+					if (CrewBoomAPIDatabase.IsInitialized && CrewBoomAPIDatabase.GetUserGuidForCharacter((int)character, out guid))
+					{
+						var path = CrewBoom.CharacterDatabase._characterBundlePaths[guid];
+						text = Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
+					}
+					else
+                    {
+						character = Characters.metalHead;
+						text = "metalhead";
+                    }
 				}
 			}
 			List<Texture2D> list;
@@ -84,9 +102,14 @@ namespace WallPlant
 			}
 			if (list == null)
 			{
-				return Plugin.GetGraffitiArtInfo().FindByCharacter(player.character).graffitiMaterial.mainTexture;
+				return Plugin.GetGraffitiArtInfo().FindByCharacter(character).graffitiMaterial.mainTexture;
 			}
 			return list[UnityEngine.Random.Range(0, list.Count)];
+		}
+
+		public static Texture GetGraffitiTexture(Player player)
+		{
+			return GetGraffitiTexture(player.character);
 		}
 
 		private static Dictionary<string, List<Texture2D>> CustomGraffiti = new Dictionary<string, List<Texture2D>>();
