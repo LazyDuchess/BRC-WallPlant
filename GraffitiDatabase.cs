@@ -66,15 +66,6 @@ namespace WallPlant
 			File.WriteAllText(filename, stringBuilder.ToString());
 		}
 
-		public static Texture GetCrewBoomGraffitiTexture(Guid guid)
-        {
-			if (!Plugin.IsCrewBoomInstalled())
-				return GetGraffitiTexture(Characters.metalHead);
-			if (!CrewBoom.CharacterDatabase.GetCharacterValueFromGuid(guid, out var chars))
-				return GetGraffitiTexture(Characters.metalHead);
-			return GetGraffitiTexture(chars);
-		}
-
 		private static void GetinternalNameAndCharacterForCrewBoomCharacter(ref Characters character, ref string text)
         {
 			if (CrewBoomAPIDatabase.IsInitialized && CrewBoomAPIDatabase.GetUserGuidForCharacter((int)character, out var guid))
@@ -92,7 +83,7 @@ namespace WallPlant
 		public static Texture GetGraffitiTexture(Characters character)
         {
 			string text = character.ToString().ToLowerInvariant();
-			if (Plugin.IsCrewBoomInstalled() && character >= Characters.MAX)
+			if (Plugin.CrewBoomInstalled && character >= Characters.MAX)
 			{
 				GetinternalNameAndCharacterForCrewBoomCharacter(ref character, ref text);
 			}

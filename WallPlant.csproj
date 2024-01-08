@@ -17,7 +17,6 @@
     </PackageReference>
     <PackageReference Include="BepInEx.Core" Version="5.*" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="1.*" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
     <PackageReference Include="UnityEngine.Modules" Version="2021.3.27" IncludeAssets="compile" />
   </ItemGroup>
   
@@ -50,11 +49,7 @@
     </Reference>
     <Reference Include="SlopCrew.API">
       <HintPath>lib\SlopCrew.API.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="SlopCrew.Plugin">
-      <HintPath>lib\SlopCrew.Plugin.dll</HintPath>
-      <Private>false</Private>
+      <Private>False</Private>
     </Reference>
   </ItemGroup>
   

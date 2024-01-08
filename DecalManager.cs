@@ -62,12 +62,15 @@ namespace WallPlant
 
 		public void PushDecal(Decal decal)
 		{
-			while (this._decals.Count >= WallPlantSettings.MaxGraffiti)
+			if (_decals.Count > 0)
 			{
-				Decal decal2 = this._decals.Dequeue();
-				if (decal2 != null)
+				while (this._decals.Count >= WallPlantSettings.MaxGraffiti)
 				{
-					UnityEngine.Object.Destroy(decal2);
+					Decal decal2 = this._decals.Dequeue();
+					if (decal2 != null)
+					{
+						UnityEngine.Object.Destroy(decal2);
+					}
 				}
 			}
 			this._decals.Enqueue(decal);

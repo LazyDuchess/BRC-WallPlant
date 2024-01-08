@@ -14,21 +14,35 @@ namespace WallPlant
     [BepInDependency(SlopCrewGUID, BepInDependency.DependencyFlags.SoftDependency)]
     internal class Plugin : BaseUnityPlugin
     {
+        public static bool SlopCrewInstalled { get; private set; }
+        public static bool CrewBoomInstalled { get; private set; }
         private const string CrewBoomGUID = "CrewBoom";
         private const string SlopCrewGUID = "SlopCrew.Plugin";
         public static Material GraffitiMaterial;
         public static Plugin Instance;
         public const string GUID = "com.LazyDuchess.BRC.WallPlant";
         public const string Name = "Wall Plant";
-        public const string Version = "2.4.2";
+        public const string Version = "2.5.7";
 
         private void Awake()
         {
             Instance = this;
             try
             {
-                if (IsSlopCrewInstalled())
-                    Net.Initialize();
+                SlopCrewInstalled = IsSlopCrewInstalled();
+                CrewBoomInstalled = IsCrewBoomInstalled();
+                if (SlopCrewInstalled)
+                {
+                    try
+                    {
+                        Net.Initialize();
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"Failed to initialize networking support for Wallplant even though SlopCrew is installed. You might have an outdated mod or an older version of the SlopCrew API for some reason.{Environment.NewLine}{e}");
+                        SlopCrewInstalled = false;
+                    }
+                }
                 GraffitiDatabase.Initialize();
                 DecalManager.Initialize();
                 var wallPlantBundle = AssetBundle.LoadFromFile(Path.Combine(Path.GetDirectoryName(Info.Location), "wallplant"));
@@ -44,6 +58,12 @@ namespace WallPlant
             }
         }
 
+        private void Update()
+        {
+            if (SlopCrewInstalled)
+                Net.Update();
+        }
+
         public ManualLogSource GetLogger()
         {
             return Logger;
@@ -56,14 +76,14 @@ namespace WallPlant
             return grafArtInfo;
         }
 
-        internal static bool IsCrewBoomInstalled()
+        private static bool IsCrewBoomInstalled()
         {
-            return Chainloader.PluginInfos.Keys.Any(x => x == CrewBoomGUID);
+            return Chainloader.PluginInfos.Keys.Contains(CrewBoomGUID);
         }
 
-        internal static bool IsSlopCrewInstalled()
+        private static bool IsSlopCrewInstalled()
         {
-            return Chainloader.PluginInfos.Keys.Any(x => x == SlopCrewGUID);
+            return Chainloader.PluginInfos.Keys.Contains(SlopCrewGUID);
         }
     }
 }

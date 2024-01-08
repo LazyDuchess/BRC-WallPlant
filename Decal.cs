@@ -7,6 +7,7 @@ namespace WallPlant
 {
 	public class Decal : MonoBehaviour
 	{
+		public Action OnDestroyCallback;
 		private void Awake()
 		{
 			Core.OnUpdate += this.OnUpdate;
@@ -76,12 +77,17 @@ namespace WallPlant
 			gameObject.transform.localScale = Vector3.one;
 			MeshFilter meshFilter = gameObject.AddComponent<MeshFilter>();
 			Renderer renderer = gameObject.AddComponent<MeshRenderer>();
+			renderer.sortingOrder = 1;
 			meshFilter.sharedMesh = mesh;
 			renderer.sharedMaterial = _material;
 		}
 
 		public void Build(LayerMask affectedLayers)
 		{
+			if (Plugin.GraffitiMaterial == null)
+				return;
+			if (DecalManager.Instance == null)
+				return;
 			_material = new Material(Plugin.GraffitiMaterial);
 			Bounds bounds = new Bounds(base.transform.position, base.transform.localScale);
 			foreach (LevelMesh levelMesh in DecalManager.Instance.GetLevelMeshesIntersectingBounds(bounds, affectedLayers))
@@ -97,8 +103,16 @@ namespace WallPlant
 			_animating = true;
 		}
 
+		public void SetCompleted()
+        {
+			_material.SetFloat(Decal.ProgressProperty, 1f);
+			_progress = 1f;
+			_animating = false;
+        }
+
 		private void OnDestroy()
 		{
+			OnDestroyCallback?.Invoke();
 			Core.OnUpdate -= OnUpdate;
 			foreach (GameObject gameObject in _decals)
 			{

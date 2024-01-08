@@ -10,6 +10,7 @@ namespace WallPlant
 
     public static class WallPlantSettings
     {
+        public static bool DebugNetworking => false;
         public static bool GraffitiPlantDefault => _graffitiPlantDefault.Value;
         public static bool GraffitiPlantSlideButton => _graffitiPlantSlideButton.Value;
         public static float GraffitiPaintSpeed => _graffitiPaintSpeed.Value;
@@ -78,7 +79,7 @@ namespace WallPlant
 
             _maxGraffiti = config.Bind("GraffitiPlant",
                 "MaxGraffiti",
-                20,
+                10,
                 "Maximum amount of graffiti in a level, before they will start getting cleaned up."
                 );
 

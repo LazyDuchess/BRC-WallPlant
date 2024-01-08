@@ -169,12 +169,18 @@ namespace WallPlant
                 return false;
             p.SetSpraycanState(Player.SpraycanState.SPRAY);
             p.AudioManager.PlaySfxGameplay(SfxCollectionID.GraffitiSfx, AudioClipID.Spray);
-            Decal decal = Decal.Create(hit.point, -hit.normal, WallPlantSettings.GraffitiSize, WallPlantLayerMask);
-            if (Plugin.IsSlopCrewInstalled())
-                Net.SendDecal(p.character, hit.point, -hit.normal, WallPlantSettings.GraffitiSize, WallPlantLayerMask);
-            decal.SetTexture(GraffitiDatabase.GetGraffitiTexture(p));
-            decal.transform.SetParent(hit.collider.transform);
-            decal.AnimateSpray();
+            if (WallPlantSettings.MaxGraffiti > 0)
+            {
+                Decal decal = Decal.Create(hit.point, -hit.normal, WallPlantSettings.GraffitiSize, WallPlantLayerMask);
+                if (Plugin.SlopCrewInstalled)
+                {
+                    var netDecal = Net.SendDecal(p.character, hit.point, -hit.normal, WallPlantSettings.GraffitiSize, WallPlantLayerMask);
+                    Net.BindNetDecal(netDecal, decal);
+                }
+                decal.SetTexture(GraffitiDatabase.GetGraffitiTexture(p));
+                decal.transform.SetParent(hit.collider.transform);
+                decal.AnimateSpray();
+            }
             return true;
         }
 
