@@ -347,12 +347,22 @@ namespace WallPlant
             var lastPointAlongPlayerDirection = 0f;
             var lastPoint = Vector3.zero;
             var normalAccumulation = Vector3.zero;
+            var anyRayHit = false;
             for(var i=-collisionSize;i<=collisionSize;i+=raySeparation)
             {
                 rayAmount++;
                 var ray = new Ray(p.transform.position + (Vector3.up * i) + (Vector3.up * 0.5f), p.motor.dir);
-                if (!Physics.Raycast(ray, out RaycastHit hit, WallPlantSettings.RaycastDistance, ~0, QueryTriggerInteraction.Ignore))
-                    return false;
+                var rayResult = Physics.Raycast(ray, out RaycastHit hit, WallPlantSettings.RaycastDistance, ~0, QueryTriggerInteraction.Ignore);
+
+                if (WallPlantSettings.RequireFlatSurface) {
+                    if (!rayResult)
+                        return false;
+                }
+                else
+                {
+                    if (!rayResult)
+                        break;
+                }
 
                 //Plugin.Instance.GetLogger().LogInfo($"Hit {hit.collider.gameObject.name}, layer: {hit.collider.gameObject.layer}, tag: {hit.collider.gameObject.tag}");
 
@@ -380,7 +390,10 @@ namespace WallPlant
                 }
 
                 normalAccumulation += hit.normal;
+                anyRayHit = true;
             }
+            if (!WallPlantSettings.RequireFlatSurface && !anyRayHit)
+                return false;
             point = lastPoint;
             normal = (normalAccumulation / rayAmount).normalized;
             return true;

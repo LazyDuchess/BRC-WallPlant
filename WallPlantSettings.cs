@@ -32,6 +32,9 @@ namespace WallPlant
         public static float WallPlantsUntilMaxPenalty => _wallPlantsUntilMaxPenalty.Value;
         public static int MaximumWallPlants => _maximumWallPlants.Value;
 
+        public static bool RequireFlatSurface => _requireFlatSurface.Value;
+
+        private static ConfigEntry<bool> _requireFlatSurface;
         private static ConfigEntry<bool> _graffitiPlantDefault;
         private static ConfigEntry<bool> _graffitiPlantSlideButton;
         private static ConfigEntry<float> _graffitiPaintSpeed;
@@ -53,6 +56,12 @@ namespace WallPlant
 
         public static void Initialize(ConfigFile config)
         {
+            _requireFlatSurface = config.Bind("GraffitiPlant",
+                "RequireFlatSurface",
+                false,
+                "If true, multiple checks will be done to make sure we're wallplanting off of a mostly flat surface."
+                );
+
             _graffitiPlantDefault = config.Bind("GraffitiPlant",
                 "GraffitiPlantByDefault",
                 false,
