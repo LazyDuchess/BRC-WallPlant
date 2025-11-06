@@ -22,7 +22,7 @@ namespace WallPlant
         public static Plugin Instance;
         public const string GUID = "com.LazyDuchess.BRC.WallPlant";
         public const string Name = "Wall Plant";
-        public const string Version = "2.5.7";
+        public const string Version = "2.6.0";
 
         private void Awake()
         {
