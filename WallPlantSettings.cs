@@ -56,9 +56,9 @@ namespace WallPlant
 
         public static void Initialize(ConfigFile config)
         {
-            _requireFlatSurface = config.Bind("GraffitiPlant",
+            _requireFlatSurface = config.Bind("WallPlant",
                 "RequireFlatSurface",
-                false,
+                true,
                 "If true, multiple checks will be done to make sure we're wallplanting off of a mostly flat surface."
                 );
 
