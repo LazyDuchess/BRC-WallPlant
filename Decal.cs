@@ -7,14 +7,12 @@ namespace WallPlant
 {
 	public class DecalMesh
 	{
-		public Transform ParentTransform;
-		public Matrix4x4 Matrix;
+		public MeshRenderer ParentRenderer;
 		public Mesh Mesh;
-		public DecalMesh(Transform parentTransform, Matrix4x4 matrix, Mesh mesh)
+		public DecalMesh(MeshRenderer parentRenderer, Mesh mesh)
 		{
-            ParentTransform = parentTransform;
-			Matrix = matrix;
-			Mesh = mesh;
+			ParentRenderer = parentRenderer;
+            Mesh = mesh;
 		}
 	}
 	public class Decal : MonoBehaviour
@@ -39,8 +37,8 @@ namespace WallPlant
 			_material.SetPass(0);
 			foreach(var decal in _decals)
 			{
-				if (!decal.ParentTransform.gameObject.activeInHierarchy) continue;
-                Graphics.DrawMeshNow(decal.Mesh, decal.Matrix);
+				if (!decal.ParentRenderer.gameObject.activeInHierarchy) continue;
+                Graphics.DrawMeshNow(decal.Mesh, decal.ParentRenderer.localToWorldMatrix);
             }
         }
 
@@ -88,7 +86,7 @@ namespace WallPlant
 
 		private void MakeDecalMesh(MeshRenderer renderer, Mesh mesh)
 		{
-			_decals.Add(new DecalMesh(renderer.transform, renderer.localToWorldMatrix, mesh));
+			_decals.Add(new DecalMesh(renderer, mesh));
 		}
 
 		public void Build(LayerMask affectedLayers)
