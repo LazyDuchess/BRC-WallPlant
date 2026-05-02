@@ -40,7 +40,7 @@ namespace WallPlant
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError($"Failed to initialize networking support for Wallplant even though SlopCrew is installed. You might have an outdated mod or an older version of the SlopCrew API for some reason.{Environment.NewLine}{e}");
+                        Debug.LogError($"Failed to initialize networking support for Wallplant even though ACN is installed.{Environment.NewLine}{e}");
                         AllCityNetworkInstalled = false;
                     }
                 }
