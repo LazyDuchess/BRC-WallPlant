@@ -8,10 +8,12 @@ namespace WallPlant
 	public class DecalMesh
 	{
 		public Transform ParentTransform;
+		public Matrix4x4 Matrix;
 		public Mesh Mesh;
-		public DecalMesh(Transform transform, Mesh mesh)
+		public DecalMesh(Transform parentTransform, Matrix4x4 matrix, Mesh mesh)
 		{
-			ParentTransform = transform;
+            ParentTransform = parentTransform;
+			Matrix = matrix;
 			Mesh = mesh;
 		}
 	}
@@ -36,7 +38,7 @@ namespace WallPlant
 			foreach(var decal in _decals)
 			{
 				if (!decal.ParentTransform.gameObject.activeInHierarchy) continue;
-                Graphics.DrawMeshNow(decal.Mesh, decal.ParentTransform.localToWorldMatrix);
+                Graphics.DrawMeshNow(decal.Mesh, decal.Matrix);
             }
         }
 
@@ -82,9 +84,9 @@ namespace WallPlant
 			_material.mainTexture = texture;
 		}
 
-		private void MakeDecalMesh(Transform originalTransform, Mesh mesh)
+		private void MakeDecalMesh(MeshRenderer renderer, Mesh mesh)
 		{
-			_decals.Add(new DecalMesh(originalTransform, mesh));
+			_decals.Add(new DecalMesh(renderer.transform, renderer.localToWorldMatrix, mesh));
 		}
 
 		public void Build(LayerMask affectedLayers)
@@ -98,7 +100,7 @@ namespace WallPlant
 			var intersectingMeshes = DecalManager.Instance.GetLevelMeshesIntersectingBounds(_cullBounds, affectedLayers);
             foreach (LevelMesh levelMesh in intersectingMeshes)
 			{
-				MakeDecalMesh(levelMesh.Renderer.transform, levelMesh.Mesh);
+				MakeDecalMesh(levelMesh.Renderer, levelMesh.Mesh);
 			}
             float num = base.transform.lossyScale.x * 0.5f;
             float num2 = base.transform.lossyScale.y * 0.5f;

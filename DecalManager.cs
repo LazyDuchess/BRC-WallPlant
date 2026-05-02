@@ -19,9 +19,19 @@ namespace WallPlant
 			List<LevelMesh> list = new List<LevelMesh>();
 			foreach (LevelMesh levelMesh in this._levelMeshes)
 			{
-				if (!(levelMesh.Renderer == null) && !(levelMesh.Mesh == null) && ((1 << levelMesh.Renderer.gameObject.layer) & layermask) != 0 && bounds.Intersects(levelMesh.Renderer.bounds))
+				if (WallPlantSettings.DebugLevelMeshes)
 				{
-					list.Add(levelMesh);
+					if (!(levelMesh.Renderer == null) && !(levelMesh.Mesh == null) && ((1 << levelMesh.Renderer.gameObject.layer) & layermask) != 0)
+					{
+						list.Add(levelMesh);
+					}
+				}
+				else
+				{
+					if (!(levelMesh.Renderer == null) && !(levelMesh.Mesh == null) && ((1 << levelMesh.Renderer.gameObject.layer) & layermask) != 0 && bounds.Intersects(levelMesh.Renderer.bounds))
+					{
+						list.Add(levelMesh);
+					}
 				}
 			}
 			return list;
@@ -33,8 +43,11 @@ namespace WallPlant
 			foreach (MeshRenderer meshRenderer in UnityEngine.Object.FindObjectsOfType<MeshRenderer>(true))
 			{
 				MeshRenderer meshRenderer2 = meshRenderer;
-				if (meshRenderer.sharedMaterial.shader.name.ToLowerInvariant().Contains("decal")) continue;
-                if (meshRenderer.sharedMaterial.shader.name.ToLowerInvariant().Contains("transparent")) continue;
+				if (meshRenderer.sharedMaterial != null)
+				{
+					if (meshRenderer.sharedMaterial.shader.name.ToLowerInvariant().Contains("decal")) continue;
+					if (meshRenderer.sharedMaterial.shader.name.ToLowerInvariant().Contains("transparent")) continue;
+				}
                 MeshFilter component = meshRenderer.GetComponent<MeshFilter>();
 				if (!(component == null) && !(component.sharedMesh == null) && !meshRenderer.GetComponentInParent<Rigidbody>(true) && !meshRenderer.GetComponentInParent<BreakableObject>(true))
 				{

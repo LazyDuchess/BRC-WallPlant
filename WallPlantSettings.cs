@@ -10,7 +10,13 @@ namespace WallPlant
 
     public static class WallPlantSettings
     {
+#if DEBUG
+        public static bool DebugNetworking => _debugNetworking.Value;
+        public static bool DebugLevelMeshes => _debugLevelMeshes.Value;
+#else
         public static bool DebugNetworking => false;
+        public static bool DebugLevelMeshes => false;
+#endif
         public static bool GraffitiPlantDefault => _graffitiPlantDefault.Value;
         public static bool GraffitiPlantSlideButton => _graffitiPlantSlideButton.Value;
         public static float GraffitiPaintSpeed => _graffitiPaintSpeed.Value;
@@ -56,6 +62,8 @@ namespace WallPlant
         private static ConfigEntry<float> _wallPlantsUntilMaxPenalty;
         private static ConfigEntry<int> _maximumWallPlants;
         private static ConfigEntry<float> _drawDistance;
+        private static ConfigEntry<bool> _debugNetworking;
+        private static ConfigEntry<bool> _debugLevelMeshes;
 
         public static void Initialize(ConfigFile config)
         {
@@ -178,6 +186,20 @@ namespace WallPlant
                 10000f,
                 "Draw distance for graffiti decals."
                 );
+
+#if DEBUG
+            _debugNetworking = config.Bind("zzzzDEBUG",
+                "DebugNetworking",
+                false,
+                "Debug."
+                );
+
+            _debugLevelMeshes = config.Bind("zzzzDEBUG",
+                "DebugLevelMeshes",
+                false,
+                "Debug."
+                );
+#endif
         }
     }
 }
