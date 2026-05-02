@@ -19,6 +19,7 @@ namespace WallPlant
 			List<LevelMesh> list = new List<LevelMesh>();
 			foreach (LevelMesh levelMesh in this._levelMeshes)
 			{
+				if (!levelMesh.Renderer.transform.gameObject.activeInHierarchy) continue;
 				if (WallPlantSettings.DebugLevelMeshes)
 				{
 					if (!(levelMesh.Renderer == null) && !(levelMesh.Mesh == null) && ((1 << levelMesh.Renderer.gameObject.layer) & layermask) != 0)
