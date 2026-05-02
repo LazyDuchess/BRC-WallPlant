@@ -1,13 +1,14 @@
-﻿using System;
+﻿using Reptile;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Reptile;
 using UnityEngine;
-using SlopCrew.API;
-using System.Collections;
+using BombRushMP.Plugin;
 
 namespace WallPlant
 {
@@ -211,14 +212,101 @@ namespace WallPlant
         public const float DecalListWaitTime = 1f;
         public const float DecalListWaitTimeReceivedPackets = 1f;
 
+        private const string PacketId = "LazyDuchess-WallPlant";
+        private const byte DecalListId = 0;
+        private const byte DecalListRequestId = 1;
+        private const byte DecalId = 2;
+
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
         public static void Initialize()
         {
-            if (!Plugin.SlopCrewInstalled)
+            if (!Plugin.AllCityNetworkInstalled)
                 return;
-            APIManager.API.OnCustomPacketReceived += OnDecalReceived;
-            APIManager.API.OnCustomPacketReceived += OnDecalListReceived;
-            APIManager.API.OnCustomPacketReceived += OnDecalListRequestReceived;
             StageManager.OnStagePostInitialization += OnStagePostInitialization;
+            ClientController.RegisterCustomPacketHandler(PacketId, PacketHandler);
+        }
+
+        private static void PacketHandler(ushort playerId, byte[] data)
+        {
+            if (ClientController.Instance.LocalID == playerId) return;
+            using (var ms = new MemoryStream(data))
+            {
+                using (var reader = new BinaryReader(ms))
+                {
+                    var packetId = reader.ReadByte();
+                    switch (packetId)
+                    {
+                        case DecalListId:
+                            OnDecalListReceived(reader);
+                            break;
+
+                        case DecalListRequestId:
+                            OnDecalListRequestReceived(playerId, reader);
+                            break;
+
+                        case DecalId:
+                            OnDecalReceived(reader);
+                            break;
+                    }
+                }
+            }
+        }
+
+        public static void OnDecalListReceived(BinaryReader reader)
+        {
+            if (DecalManager.Instance == null)
+                return;
+            if (ReceivedDecalList)
+                return;
+            Log("Received a decal list packet.");
+            var decalList = NetDecalList.Read(reader);
+            if (decalList == null)
+            {
+                reader.Close();
+                return;
+            }
+            Log($"Decal list contains {decalList.Decals.Count} decals.");
+            if (decalList.DecalLimit >= WallPlantSettings.MaxGraffiti || (decalList.Decals.Count < decalList.DecalLimit))
+            {
+                Log($"Applying the decal list we just received! Contains {decalList.Decals.Count} decals.");
+                ReceivedDecalList = true;
+                decalList.ApplyToWorld();
+                reader.Close();
+                ReceivedDecalLists.Clear();
+                return;
+            }
+            Log("Adding the decal list we just received to our candidates.");
+            ReceivedDecalLists.Add(decalList);
+        }
+
+        public static void OnDecalListRequestReceived(ushort playerId, BinaryReader reader)
+        {
+            if (DecalManager.Instance == null)
+                return;
+            if (!ReceivedDecalList)
+                return;
+            Log($"Player {playerId} is requesting a decal list. Sending.");
+            var currentDecalList = NetDecalList.MakeFromCurrentDecals();
+            SendDecalList(currentDecalList);
+        }
+
+        public static void OnDecalReceived(BinaryReader reader)
+        {
+            if (WallPlantSettings.MaxGraffiti <= 0)
+                return;
+            if (DecalManager.Instance == null)
+                return;
+            Log($"Got a decal. Currently at {CurrentDecals.Count} decals.");
+            var netDecal = NetDecal.Read(reader);
+            if (netDecal == null)
+            {
+                reader.Close();
+                return;
+            }
+            var decal = Decal.Create(netDecal.Point, netDecal.Normal, netDecal.Size, WallPlantAbility.WallPlantLayerMask);
+            BindNetDecal(netDecal, decal);
+            decal.SetTexture(GraffitiDatabase.GetGraffitiTexture(netDecal.Character));
+            decal.AnimateSpray();
         }
 
         private static void OnStagePostInitialization()
@@ -231,27 +319,16 @@ namespace WallPlant
             DecalRequestCurrentAttempt = 1;
             Plugin.Instance.StopAllCoroutines();
             Plugin.Instance.StartCoroutine(OnJoinNewStage());
-            /*
-            Debug.Log($"SlopCrew connected postinit: {APIManager.API.Connected}");
-            Debug.Log($"SlopCrew Playa Count: {APIManager.API.PlayerCount}");*/
         }
 
         private static IEnumerator OnJoinNewStage()
         {
             yield return new WaitForSecondsRealtime(0.5f);
-            if (!APIManager.API.Connected)
+            if (!ClientController.Instance.Connected)
                 yield return null;
-            if (APIManager.API.PlayerCount <= 1)
-            {
-                Log("We're alone in this stage, not requesting decals.");
-                ReceivedDecalList = true;
-            }
-            else
-            {
-                Log($"Requesting decals for this stage. There are {APIManager.API.PlayerCount} players including ourselves.");
-                RequestDecalList();
-                DecalRequestSent = true;
-            }
+            Log($"Requesting decals for this stage. There are {ClientController.Instance.Players.Count} players including ourselves.");
+            RequestDecalList();
+            DecalRequestSent = true;
         }
 
         private static void Log(string message)
@@ -261,6 +338,7 @@ namespace WallPlant
             Debug.Log($"[WALLPLANT NETWORKING] {message}");
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
         public static void Update()
         {
             if (ReceivedDecalList)
@@ -273,7 +351,7 @@ namespace WallPlant
                 waitTime = DecalListWaitTimeReceivedPackets;
             if (CurrentDecalListWaitTime >= waitTime)
             {
-                if (DecalRequestCurrentAttempt < DecalRequestAttempts && SlopCrew.API.APIManager.API.Connected)
+                if (DecalRequestCurrentAttempt < DecalRequestAttempts && ClientController.Instance.Connected)
                 {
                     Log("Wait for decal list expired. Trying again.");
                     CurrentDecalListWaitTime = 0f;
@@ -313,115 +391,49 @@ namespace WallPlant
 
         public static void RequestDecalList()
         {
-            if (!Plugin.SlopCrewInstalled)
+            if (!Plugin.AllCityNetworkInstalled)
                 return;
             Log("Sending request decal list packet.");
             var ms = new MemoryStream();
             var writer = new BinaryWriter(ms);
+            writer.Write(DecalListRequestId);
             writer.Write(WallPlantSettings.MaxGraffiti);
             writer.Flush();
             var data = ms.ToArray();
-            APIManager.API.SendCustomPacket($"{PluginInfo.PLUGIN_GUID}-DecalRequest", data);
+            ClientController.Instance.BroadcastCustomPacket(data, PacketId);
             writer.Close();
         }
 
         public static void SendDecalList(NetDecalList decalList)
         {
-            if (!Plugin.SlopCrewInstalled)
+            if (!Plugin.AllCityNetworkInstalled)
                 return;
             Log("Sending a decal list packet");
             var ms = new MemoryStream();
             var writer = new BinaryWriter(ms);
+            writer.Write(DecalListId);
             decalList.Serialize(writer);
             writer.Flush();
             var data = ms.ToArray();
-            APIManager.API.SendCustomPacket($"{PluginInfo.PLUGIN_GUID}-DecalList", data);
+            ClientController.Instance.BroadcastCustomPacket(data, PacketId);
             writer.Close();
         }
 
         public static NetDecal SendDecal(Characters character, Vector3 point, Vector3 normal, float size, LayerMask affectedLayers)
         {
-            if (!Plugin.SlopCrewInstalled)
+            if (!Plugin.AllCityNetworkInstalled)
                 return null;
             Log($"Sending a decal. Currently have {CurrentDecals.Count} decals.");
             var ms = new MemoryStream();
             var writer = new BinaryWriter(ms);
+            writer.Write(DecalId);
             var decal = new NetDecal(character, point, normal, size);
             decal.Serialize(writer);
             writer.Flush();
             var data = ms.ToArray();
-            APIManager.API.SendCustomPacket($"{PluginInfo.PLUGIN_GUID}-Decal", data);
+            ClientController.Instance.BroadcastCustomPacket(data, PacketId);
             writer.Close();
             return decal;
-        }
-
-        public static void OnDecalListReceived(uint player, string packetId, byte[] data)
-        {
-            if (DecalManager.Instance == null)
-                return;
-            if (ReceivedDecalList)
-                return;
-            if (packetId != $"{PluginInfo.PLUGIN_GUID}-DecalList")
-                return;
-            Log("Received a decal list packet.");
-            var ms = new MemoryStream(data);
-            var reader = new BinaryReader(ms);
-            var decalList = NetDecalList.Read(reader);
-            if (decalList == null)
-            {
-                reader.Close();
-                return;
-            }
-            Log($"Decal list contains {decalList.Decals.Count} decals.");
-            if (decalList.DecalLimit >= WallPlantSettings.MaxGraffiti || (decalList.Decals.Count < decalList.DecalLimit))
-            {
-                Log($"Applying the decal list we just received! Contains {decalList.Decals.Count} decals.");
-                ReceivedDecalList = true;
-                decalList.ApplyToWorld();
-                reader.Close();
-                ReceivedDecalLists.Clear();
-                return;
-            }
-            Log("Adding the decal list we just received to our candidates.");
-            ReceivedDecalLists.Add(decalList);
-            reader.Close();
-        }
-
-        public static void OnDecalListRequestReceived(uint player, string packetId, byte[] data)
-        {
-            if (DecalManager.Instance == null)
-                return;
-            if (!ReceivedDecalList)
-                return;
-            if (packetId != $"{PluginInfo.PLUGIN_GUID}-DecalRequest")
-                return;
-            Log($"Player {player} is requesting a decal list. Sending.");
-            var currentDecalList = NetDecalList.MakeFromCurrentDecals();
-            SendDecalList(currentDecalList);
-        }
-
-        public static void OnDecalReceived(uint player, string packetId, byte[] data)
-        {
-            if (WallPlantSettings.MaxGraffiti <= 0)
-                return;
-            if (DecalManager.Instance == null)
-                return;
-            if (packetId != $"{PluginInfo.PLUGIN_GUID}-Decal")
-                return;
-            Log($"Got a decal. Currently at {CurrentDecals.Count} decals.");
-            var ms = new MemoryStream(data);
-            var reader = new BinaryReader(ms);
-            var netDecal = NetDecal.Read(reader);
-            if (netDecal == null)
-            {
-                reader.Close();
-                return;
-            }
-            var decal = Decal.Create(netDecal.Point, netDecal.Normal, netDecal.Size, WallPlantAbility.WallPlantLayerMask);
-            BindNetDecal(netDecal, decal);
-            decal.SetTexture(GraffitiDatabase.GetGraffitiTexture(netDecal.Character));
-            decal.AnimateSpray();
-            reader.Close();
         }
 
         public static void BindNetDecal(NetDecal netDecal, Decal decal)

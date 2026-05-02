@@ -172,7 +172,7 @@ namespace WallPlant
             if (WallPlantSettings.MaxGraffiti > 0)
             {
                 Decal decal = Decal.Create(hit.point, -hit.normal, WallPlantSettings.GraffitiSize, WallPlantLayerMask);
-                if (Plugin.SlopCrewInstalled)
+                if (Plugin.AllCityNetworkInstalled)
                 {
                     var netDecal = Net.SendDecal(p.character, hit.point, -hit.normal, WallPlantSettings.GraffitiSize, WallPlantLayerMask);
                     Net.BindNetDecal(netDecal, decal);

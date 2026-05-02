@@ -11,27 +11,28 @@ using System.Linq;
 namespace WallPlant
 {
     [BepInPlugin(GUID, Name, Version)]
-    [BepInDependency(SlopCrewGUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(CrewBoomGUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(AllCityNetworkGUID, BepInDependency.DependencyFlags.SoftDependency)]
     internal class Plugin : BaseUnityPlugin
     {
-        public static bool SlopCrewInstalled { get; private set; }
+        public static bool AllCityNetworkInstalled { get; private set; }
         public static bool CrewBoomInstalled { get; private set; }
         private const string CrewBoomGUID = "CrewBoom";
-        private const string SlopCrewGUID = "SlopCrew.Plugin";
+        private const string AllCityNetworkGUID = "BombRushMP.Plugin";
         public static Material GraffitiMaterial;
         public static Plugin Instance;
         public const string GUID = "com.LazyDuchess.BRC.WallPlant";
         public const string Name = "Wall Plant";
-        public const string Version = "2.6.1";
+        public const string Version = "2.7.0";
 
         private void Awake()
         {
             Instance = this;
             try
             {
-                SlopCrewInstalled = IsSlopCrewInstalled();
+                AllCityNetworkInstalled = IsAllCityNetworkInstalled();
                 CrewBoomInstalled = IsCrewBoomInstalled();
-                if (SlopCrewInstalled)
+                if (AllCityNetworkInstalled)
                 {
                     try
                     {
@@ -40,7 +41,7 @@ namespace WallPlant
                     catch (Exception e)
                     {
                         Debug.LogError($"Failed to initialize networking support for Wallplant even though SlopCrew is installed. You might have an outdated mod or an older version of the SlopCrew API for some reason.{Environment.NewLine}{e}");
-                        SlopCrewInstalled = false;
+                        AllCityNetworkInstalled = false;
                     }
                 }
                 GraffitiDatabase.Initialize();
@@ -60,7 +61,7 @@ namespace WallPlant
 
         private void Update()
         {
-            if (SlopCrewInstalled)
+            if (AllCityNetworkInstalled)
                 Net.Update();
         }
 
@@ -81,9 +82,9 @@ namespace WallPlant
             return Chainloader.PluginInfos.Keys.Contains(CrewBoomGUID);
         }
 
-        private static bool IsSlopCrewInstalled()
+        private static bool IsAllCityNetworkInstalled()
         {
-            return Chainloader.PluginInfos.Keys.Contains(SlopCrewGUID);
+            return Chainloader.PluginInfos.Keys.Contains(AllCityNetworkGUID);
         }
     }
 }

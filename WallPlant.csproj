@@ -34,6 +34,12 @@
       <Private>false</Private>
 	  <Publicize>true</Publicize>
     </Reference>
+    <Reference Include="BombRushMP.Common">
+      <HintPath>lib\BombRushMP.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="BombRushMP.Plugin">
+      <HintPath>lib\BombRushMP.Plugin.dll</HintPath>
+    </Reference>
     <Reference Include="CrewBoom">
       <HintPath>lib\CrewBoom.dll</HintPath>
       <Publicize>true</Publicize>
@@ -47,10 +53,6 @@
       <HintPath>lib\CrewBoomMono.dll</HintPath>
       <Publicize>true</Publicize>
       <Private>false</Private>
-    </Reference>
-    <Reference Include="SlopCrew.API">
-      <HintPath>lib\SlopCrew.API.dll</HintPath>
-      <Private>False</Private>
     </Reference>
   </ItemGroup>
   
