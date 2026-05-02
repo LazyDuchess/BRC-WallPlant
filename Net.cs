@@ -93,6 +93,7 @@ namespace WallPlant
                     return Characters.metalHead;
                 return ReturnCrewBoomCharacter();
 
+                [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
                 Characters ReturnCrewBoomCharacter()
                 {
                     if (!CrewBoomAPI.CrewBoomAPIDatabase.IsInitialized)
@@ -124,6 +125,7 @@ namespace WallPlant
             Normal = normal;
             Size = Mathf.Clamp(size, 0.1f, 15f);
 
+            [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
             void CrewBoomStuff()
             {
                 if (!CrewBoomAPI.CrewBoomAPIDatabase.IsInitialized)
