@@ -5,22 +5,11 @@ using UnityEngine;
 
 namespace WallPlant
 {
-	public class DecalMesh
-	{
-		public Transform ParentTransform;
-		public Matrix4x4 Matrix;
-		public Mesh Mesh;
-		public DecalMesh(Transform parentTransform, Matrix4x4 matrix, Mesh mesh)
-		{
-            ParentTransform = parentTransform;
-			Matrix = matrix;
-			Mesh = mesh;
-		}
-	}
 	public class Decal : MonoBehaviour
 	{
 		public Action OnDestroyCallback;
 		private Bounds _cullBounds;
+		private Mesh _decalMesh;
 
 		private void Awake()
 		{
@@ -29,17 +18,15 @@ namespace WallPlant
 
         private void OnRenderObject()
         {
+			if (_decalMesh == null)
+				return;
 			if (Vector3.SqrMagnitude(Camera.current.transform.position - transform.position) > WallPlantSettings.GraffitiDrawDistance)
 				return;
             var planes = GeometryUtility.CalculateFrustumPlanes(Camera.current);
 			if (!GeometryUtility.TestPlanesAABB(planes, _cullBounds))
 				return;
 			_material.SetPass(0);
-			foreach(var decal in _decals)
-			{
-				if (!decal.ParentTransform.gameObject.activeInHierarchy) continue;
-                Graphics.DrawMeshNow(decal.Mesh, decal.Matrix);
-            }
+			Graphics.DrawMeshNow(_decalMesh, Matrix4x4.identity);
         }
 
         private void OnUpdate()
@@ -84,11 +71,6 @@ namespace WallPlant
 			_material.mainTexture = texture;
 		}
 
-		private void MakeDecalMesh(MeshRenderer renderer, Mesh mesh)
-		{
-			_decals.Add(new DecalMesh(renderer.transform, renderer.localToWorldMatrix, mesh));
-		}
-
 		public void Build(LayerMask affectedLayers)
 		{
 			if (Plugin.GraffitiMaterial == null)
@@ -98,13 +80,34 @@ namespace WallPlant
 			_material = new Material(Plugin.GraffitiMaterial);
 			_cullBounds = new Bounds(base.transform.position, base.transform.localScale * 2f);
 			var intersectingMeshes = DecalManager.Instance.GetLevelMeshesIntersectingBounds(_cullBounds, affectedLayers);
-			var curI = 0;
-            foreach (LevelMesh levelMesh in intersectingMeshes)
+            var instances = new CombineInstance[intersectingMeshes.Count];
+
+			for (var i = 0; i < intersectingMeshes.Count; i++)
 			{
-				curI++;
-				MakeDecalMesh(levelMesh.Renderer, levelMesh.Mesh);
-				if (curI >= WallPlantSettings.MaxGraffitiDrawCalls) break;
+				for (var n = 0; n < intersectingMeshes[i].Mesh.subMeshCount; n++)
+				{
+					instances[i] = new CombineInstance() { mesh = intersectingMeshes[i].Mesh, transform = intersectingMeshes[i].Renderer.localToWorldMatrix, subMeshIndex = n };
+				}
 			}
+
+			_decalMesh = new Mesh();
+			_decalMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+			try
+			{
+				_decalMesh.CombineMeshes(instances, true, true, false);
+			}
+			catch(Exception e)
+			{
+				Destroy(_decalMesh);
+				_decalMesh = null;
+			}
+
+			if (_decalMesh.vertexCount > WallPlantSettings.MaxVertices)
+			{
+				Destroy(_decalMesh);
+                _decalMesh = null;
+            }
+
             float num = base.transform.lossyScale.x * 0.5f;
             float num2 = base.transform.lossyScale.y * 0.5f;
             float num3 = base.transform.lossyScale.z * 0.5f;
@@ -135,6 +138,8 @@ namespace WallPlant
 			OnDestroyCallback?.Invoke();
 			Core.OnUpdate -= OnUpdate;
 			UnityEngine.Object.Destroy(_material);
+			if (_decalMesh != null)
+				UnityEngine.Object.Destroy(_decalMesh);
 		}
 
 		private static int ProgressProperty = Shader.PropertyToID("_Progress");
@@ -144,7 +149,5 @@ namespace WallPlant
 		private bool _animating;
 
 		private Material _material;
-
-		private List<DecalMesh> _decals = new List<DecalMesh>();
 	}
 }

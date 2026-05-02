@@ -12,6 +12,7 @@ namespace WallPlant
     {
         public const float MaxDecalSize = 15f;
         public const float MinDecalSize = 0.1f;
+        public const int MaxVertices = 200000;
 
 #if DEBUG
         public static bool DebugNetworking => _debugNetworking.Value;
