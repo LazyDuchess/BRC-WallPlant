@@ -10,6 +10,9 @@ namespace WallPlant
 
     public static class WallPlantSettings
     {
+        public const float MaxDecalSize = 15f;
+        public const float MinDecalSize = 0.1f;
+
 #if DEBUG
         public static bool DebugNetworking => _debugNetworking.Value;
         public static bool DebugLevelMeshes => _debugLevelMeshes.Value;

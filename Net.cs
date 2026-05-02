@@ -167,7 +167,7 @@ namespace WallPlant
                 CrewBoomGUID = Guid.Parse(reader.ReadString());
             }
             var affectedLayers = (LayerMask)reader.ReadInt32();
-            Size = Mathf.Clamp(reader.ReadSingle(), 0.1f, 15f);
+            Size = Mathf.Clamp(reader.ReadSingle(), WallPlantSettings.MinDecalSize, WallPlantSettings.MaxDecalSize);
             Point = ReadVector3(reader);
             Normal = Vector3.Normalize(ReadVector3(reader));
             return true;
