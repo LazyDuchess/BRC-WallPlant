@@ -10,7 +10,7 @@ namespace WallPlant
 
     public static class WallPlantSettings
     {
-        public static bool DebugNetworking => true;
+        public static bool DebugNetworking => false;
         public static bool GraffitiPlantDefault => _graffitiPlantDefault.Value;
         public static bool GraffitiPlantSlideButton => _graffitiPlantSlideButton.Value;
         public static float GraffitiPaintSpeed => _graffitiPaintSpeed.Value;
