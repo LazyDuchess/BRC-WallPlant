@@ -29,6 +29,8 @@ namespace WallPlant
 
         private void OnRenderObject()
         {
+			if ((Camera.current.cullingMask & 1) == 0)
+				return;
 			if (Vector3.SqrMagnitude(Camera.current.transform.position - transform.position) > WallPlantSettings.GraffitiDrawDistance)
 				return;
             var planes = GeometryUtility.CalculateFrustumPlanes(Camera.current);
