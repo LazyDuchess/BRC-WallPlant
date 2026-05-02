@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using CommonAPI;
 using Reptile;
 using UnityEngine;
 
@@ -32,8 +33,10 @@ namespace WallPlant
 			foreach (MeshRenderer meshRenderer in UnityEngine.Object.FindObjectsOfType<MeshRenderer>(true))
 			{
 				MeshRenderer meshRenderer2 = meshRenderer;
-				MeshFilter component = meshRenderer.GetComponent<MeshFilter>();
-				if (!(component == null) && !(component.sharedMesh == null) && !meshRenderer.GetComponent<Rigidbody>())
+				if (meshRenderer.sharedMaterial.shader.name.ToLowerInvariant().Contains("decal")) continue;
+                if (meshRenderer.sharedMaterial.shader.name.ToLowerInvariant().Contains("transparent")) continue;
+                MeshFilter component = meshRenderer.GetComponent<MeshFilter>();
+				if (!(component == null) && !(component.sharedMesh == null) && !meshRenderer.GetComponentInParent<Rigidbody>(true) && !meshRenderer.GetComponentInParent<BreakableObject>(true))
 				{
 					LevelMesh levelMesh = new LevelMesh
 					{
@@ -52,11 +55,11 @@ namespace WallPlant
 
 		internal static void Initialize()
 		{
-			StageManager.OnStagePostInitialization += DecalManager.StageManager_OnStagePostInitialization;
+			StageAPI.OnStagePreInitialization += DecalManager.OnStageInit;
 		}
 
-		private static void StageManager_OnStagePostInitialization()
-		{
+        private static void OnStageInit(Stage newStage, Stage previousStage)
+        {
 			new GameObject("Decal Manager").AddComponent<DecalManager>();
 		}
 

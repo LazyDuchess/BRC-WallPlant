@@ -5,30 +5,44 @@ using UnityEngine;
 
 namespace WallPlant
 {
+	public class DecalMesh
+	{
+		public Transform ParentTransform;
+		public Mesh Mesh;
+		public DecalMesh(Transform transform, Mesh mesh)
+		{
+			ParentTransform = transform;
+			Mesh = mesh;
+		}
+	}
 	public class Decal : MonoBehaviour
 	{
 		public Action OnDestroyCallback;
+		private Bounds _cullBounds;
+
 		private void Awake()
 		{
-			Core.OnUpdate += this.OnUpdate;
-		}
+            Core.OnUpdate += OnUpdate;
+        }
 
-		private void OnUpdate()
+        private void OnRenderObject()
+        {
+			if (Vector3.SqrMagnitude(Camera.current.transform.position - transform.position) > WallPlantSettings.GraffitiDrawDistance)
+				return;
+            var planes = GeometryUtility.CalculateFrustumPlanes(Camera.current);
+			if (!GeometryUtility.TestPlanesAABB(planes, _cullBounds))
+				return;
+			_material.SetPass(0);
+			foreach(var decal in _decals)
+			{
+				if (!decal.ParentTransform.gameObject.activeInHierarchy) continue;
+                Graphics.DrawMeshNow(decal.Mesh, decal.ParentTransform.localToWorldMatrix);
+            }
+        }
+
+        private void OnUpdate()
 		{
 			if (this._material == null)
-			{
-				return;
-			}
-			float num = base.transform.lossyScale.x * 0.5f;
-			float num2 = base.transform.lossyScale.y * 0.5f;
-			float num3 = base.transform.lossyScale.z * 0.5f;
-			Vector3 vector = base.transform.forward * num3 + base.transform.right * num + base.transform.up * num2;
-			Matrix4x4 matrix4x = base.transform.worldToLocalMatrix * Matrix4x4.Translate(vector);
-			this._material.SetMatrix("_Projection", matrix4x);
-			this._material.SetVector("_Origin", base.transform.position);
-			this._material.SetVector("_Bounds", base.transform.lossyScale * 2f);
-			this._material.SetVector("_Normal", base.transform.forward);
-			if (!this._animating)
 			{
 				return;
 			}
@@ -36,8 +50,9 @@ namespace WallPlant
 			if (this._progress >= 1f)
 			{
 				this._progress = 1f;
-				this._animating = false;
-			}
+                this._animating = false;
+                Core.OnUpdate -= OnUpdate;
+            }
 			this._material.SetFloat(Decal.ProgressProperty, this._progress);
 		}
 
@@ -69,17 +84,7 @@ namespace WallPlant
 
 		private void MakeDecalMesh(Transform originalTransform, Mesh mesh)
 		{
-			GameObject gameObject = new GameObject("Decal Mesh");
-			_decals.Add(gameObject);
-			gameObject.transform.SetParent(originalTransform);
-			gameObject.transform.localPosition = Vector3.zero;
-			gameObject.transform.localRotation = Quaternion.identity;
-			gameObject.transform.localScale = Vector3.one;
-			MeshFilter meshFilter = gameObject.AddComponent<MeshFilter>();
-			Renderer renderer = gameObject.AddComponent<MeshRenderer>();
-			renderer.sortingOrder = 1;
-			meshFilter.sharedMesh = mesh;
-			renderer.sharedMaterial = _material;
+			_decals.Add(new DecalMesh(originalTransform, mesh));
 		}
 
 		public void Build(LayerMask affectedLayers)
@@ -89,12 +94,22 @@ namespace WallPlant
 			if (DecalManager.Instance == null)
 				return;
 			_material = new Material(Plugin.GraffitiMaterial);
-			Bounds bounds = new Bounds(base.transform.position, base.transform.localScale);
-			foreach (LevelMesh levelMesh in DecalManager.Instance.GetLevelMeshesIntersectingBounds(bounds, affectedLayers))
+			_cullBounds = new Bounds(base.transform.position, base.transform.localScale * 2f);
+			var intersectingMeshes = DecalManager.Instance.GetLevelMeshesIntersectingBounds(_cullBounds, affectedLayers);
+            foreach (LevelMesh levelMesh in intersectingMeshes)
 			{
 				MakeDecalMesh(levelMesh.Renderer.transform, levelMesh.Mesh);
 			}
-		}
+            float num = base.transform.lossyScale.x * 0.5f;
+            float num2 = base.transform.lossyScale.y * 0.5f;
+            float num3 = base.transform.lossyScale.z * 0.5f;
+            Vector3 vector = base.transform.forward * num3 + base.transform.right * num + base.transform.up * num2;
+            Matrix4x4 matrix4x = base.transform.worldToLocalMatrix * Matrix4x4.Translate(vector);
+            this._material.SetMatrix("_Projection", matrix4x);
+            this._material.SetVector("_Origin", base.transform.position);
+            this._material.SetVector("_Bounds", base.transform.lossyScale * 2f);
+            this._material.SetVector("_Normal", base.transform.forward);
+        }
 
 		public void AnimateSpray()
 		{
@@ -114,13 +129,6 @@ namespace WallPlant
 		{
 			OnDestroyCallback?.Invoke();
 			Core.OnUpdate -= OnUpdate;
-			foreach (GameObject gameObject in _decals)
-			{
-				if (!(gameObject == null))
-				{
-					UnityEngine.Object.Destroy(gameObject);
-				}
-			}
 			UnityEngine.Object.Destroy(_material);
 		}
 
@@ -132,6 +140,6 @@ namespace WallPlant
 
 		private Material _material;
 
-		private List<GameObject> _decals = new List<GameObject>();
+		private List<DecalMesh> _decals = new List<DecalMesh>();
 	}
 }

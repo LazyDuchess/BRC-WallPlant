@@ -40,6 +40,9 @@
     <Reference Include="BombRushMP.Plugin">
       <HintPath>lib\BombRushMP.Plugin.dll</HintPath>
     </Reference>
+    <Reference Include="CommonAPI">
+      <HintPath>lib\CommonAPI.dll</HintPath>
+    </Reference>
     <Reference Include="CrewBoom">
       <HintPath>lib\CrewBoom.dll</HintPath>
       <Publicize>true</Publicize>

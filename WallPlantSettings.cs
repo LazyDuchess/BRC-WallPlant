@@ -34,6 +34,8 @@ namespace WallPlant
 
         public static bool RequireFlatSurface => _requireFlatSurface.Value;
 
+        public static float GraffitiDrawDistance => _drawDistance.Value;
+
         private static ConfigEntry<bool> _requireFlatSurface;
         private static ConfigEntry<bool> _graffitiPlantDefault;
         private static ConfigEntry<bool> _graffitiPlantSlideButton;
@@ -53,6 +55,7 @@ namespace WallPlant
         private static ConfigEntry<float> _minimumSpeed;
         private static ConfigEntry<float> _wallPlantsUntilMaxPenalty;
         private static ConfigEntry<int> _maximumWallPlants;
+        private static ConfigEntry<float> _drawDistance;
 
         public static void Initialize(ConfigFile config)
         {
@@ -168,6 +171,12 @@ namespace WallPlant
                 "JumpOffWallOffset",
                 0.9f,
                 "How far away from the wall you'll be teleported when you jump off."
+                );
+
+            _drawDistance = config.Bind("GraffitiPlant",
+                "GraffitiDrawDistance",
+                10000f,
+                "Draw distance for graffiti decals."
                 );
         }
     }
