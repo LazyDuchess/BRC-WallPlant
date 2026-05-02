@@ -41,6 +41,7 @@ namespace WallPlant
         public static bool RequireFlatSurface => _requireFlatSurface.Value;
 
         public static float GraffitiDrawDistance => _drawDistance.Value;
+        public static int MaxGraffitiDrawCalls => _maxDrawCalls.Value;
 
         private static ConfigEntry<bool> _requireFlatSurface;
         private static ConfigEntry<bool> _graffitiPlantDefault;
@@ -64,6 +65,7 @@ namespace WallPlant
         private static ConfigEntry<float> _drawDistance;
         private static ConfigEntry<bool> _debugNetworking;
         private static ConfigEntry<bool> _debugLevelMeshes;
+        private static ConfigEntry<int> _maxDrawCalls;
 
         public static void Initialize(ConfigFile config)
         {
@@ -185,6 +187,12 @@ namespace WallPlant
                 "GraffitiDrawDistance",
                 10000f,
                 "Draw distance for graffiti decals."
+                );
+
+            _maxDrawCalls = config.Bind("GraffitiPlant",
+                "GraffitiDrawCalls",
+                30,
+                "Max draw calls for graffiti decals."
                 );
 
 #if DEBUG

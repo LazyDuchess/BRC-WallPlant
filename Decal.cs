@@ -98,9 +98,12 @@ namespace WallPlant
 			_material = new Material(Plugin.GraffitiMaterial);
 			_cullBounds = new Bounds(base.transform.position, base.transform.localScale * 2f);
 			var intersectingMeshes = DecalManager.Instance.GetLevelMeshesIntersectingBounds(_cullBounds, affectedLayers);
+			var curI = 0;
             foreach (LevelMesh levelMesh in intersectingMeshes)
 			{
+				curI++;
 				MakeDecalMesh(levelMesh.Renderer, levelMesh.Mesh);
+				if (curI >= WallPlantSettings.MaxGraffitiDrawCalls) break;
 			}
             float num = base.transform.lossyScale.x * 0.5f;
             float num2 = base.transform.lossyScale.y * 0.5f;
