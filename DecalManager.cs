@@ -19,17 +19,19 @@ namespace WallPlant
 			List<LevelMesh> list = new List<LevelMesh>();
 			foreach (LevelMesh levelMesh in this._levelMeshes)
 			{
+				if (levelMesh.Renderer == null) continue;
+				if (levelMesh.Mesh == null) continue;
 				if (!levelMesh.Renderer.transform.gameObject.activeInHierarchy) continue;
 				if (WallPlantSettings.DebugLevelMeshes)
 				{
-					if (!(levelMesh.Renderer == null) && !(levelMesh.Mesh == null) && ((1 << levelMesh.Renderer.gameObject.layer) & layermask) != 0)
+					if (((1 << levelMesh.Renderer.gameObject.layer) & layermask) != 0)
 					{
 						list.Add(levelMesh);
 					}
 				}
 				else
 				{
-					if (!(levelMesh.Renderer == null) && !(levelMesh.Mesh == null) && ((1 << levelMesh.Renderer.gameObject.layer) & layermask) != 0 && bounds.Intersects(levelMesh.Renderer.bounds))
+					if (((1 << levelMesh.Renderer.gameObject.layer) & layermask) != 0 && bounds.Intersects(levelMesh.Renderer.bounds))
 					{
 						list.Add(levelMesh);
 					}
