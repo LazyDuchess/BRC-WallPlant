@@ -419,6 +419,7 @@ namespace WallPlant
             writer.Close();
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
         public static NetDecal SendDecal(Characters character, Vector3 point, Vector3 normal, float size, LayerMask affectedLayers)
         {
             if (!Plugin.AllCityNetworkInstalled)
@@ -436,6 +437,7 @@ namespace WallPlant
             return decal;
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
         public static void BindNetDecal(NetDecal netDecal, Decal decal)
         {
             CurrentDecals.Insert(0, netDecal);
